@@ -1,0 +1,176 @@
+<div id="topbar-container" data-title="Pending Reviews"></div>
+
+<main class="p-8 space-y-10">
+    <!-- Summary Cards for Context -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="card bg-primary/5 border-none flex flex-col justify-between p-6">
+            <p class="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Awaiting Review</p>
+            <div class="flex items-baseline gap-2">
+                <h3 class="text-4xl font-black text-ink">{{ totalPendingCount() }}</h3>
+                <p class="text-xs text-muted font-bold">Applications</p>
+            </div>
+        </div>
+        <div class="card bg-rose-50 border-none flex flex-col justify-between p-6">
+            <p class="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em] mb-4">High Risk Alert</p>
+            <div class="flex items-baseline gap-2">
+                <h3 class="text-4xl font-black text-rose-700">
+                    {{ highRiskCount() }}
+                </h3>
+                <p class="text-xs text-rose-600 font-bold">Requires Audit</p>
+            </div>
+        </div>
+        <div class="card bg-slate-900 border-none flex flex-col justify-between p-6">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Average Premium</p>
+            <div class="flex items-baseline gap-2 text-white">
+                <h3 class="text-3xl font-black italic">₹{{ (pendingPolicies().length > 0 ? 6850 : 0).toLocaleString() }}
+                </h3>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Est. Value</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table Card -->
+    <div class="card p-0 overflow-hidden border-line/60">
+        <div
+            class="p-8 border-b border-line/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-50/30">
+            <div>
+                <h2 class="text-lg font-black text-ink uppercase tracking-tight">Underwriting Queue</h2>
+                <p class="text-[10px] text-muted font-bold uppercase tracking-[0.1em] mt-1">
+                    Evaluate system risks and approve coverage applications
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size="14"></i>
+                    <input type="text" placeholder="Filter Queue..."
+                        class="pl-10 pr-4 py-2 bg-white border border-line text-[10px] font-bold uppercase tracking-widest focus:border-primary outline-none transition-all w-48">
+                </div>
+                <button class="p-2 border border-line hover:bg-white transition-colors">
+                    <i data-lucide="sliders-horizontal" size="14" class="text-muted"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50">
+                        <th
+                            class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40">
+                            Entity & Deployment</th>
+                        <th
+                            class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-center">
+                            Risk Assessment</th>
+                        <th
+                            class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-center">
+                            Coverage Term</th>
+                        <th
+                            class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-right">
+                            Calculated Premium</th>
+                        <th
+                            class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-right">
+                            Decisions</th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-line/30">
+                    @if (loading()) {
+                    <tr>
+                        <td colspan="5" class="p-20 text-center">
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                <p class="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Assembling
+                                    Security Data...</p>
+                            </div>
+                        </td>
+                    </tr>
+                    } @else if (pendingPolicies().length === 0) {
+                    <tr>
+                        <td colspan="5" class="p-20 text-center bg-slate-50/10">
+                            <div class="flex flex-col items-center gap-2 opacity-40">
+                                <i data-lucide="check-circle-2" size="48" class="text-slate-300"></i>
+                                <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">Clear Skies</h3>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase">No pending applications in the
+                                    queue</p>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+
+                    @for (policy of pendingPolicies(); track policy.id) {
+                    <tr class="group hover:bg-slate-50/80 transition-all cursor-default">
+                        <td class="p-6">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-10 h-10 bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
+                                    <i data-lucide="cpu" size="20"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-ink group-hover:text-primary transition-colors">{{
+                                        policy.aiSystem?.name }}</p>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-[9px] font-black text-primary uppercase tracking-widest">{{
+                                            policy.aiSystem?.company?.name }}</span>
+                                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                        <span
+                                            class="text-[9px] font-bold text-muted uppercase tracking-widest italic">{{
+                                            policy.policyType?.name?.replace('_', ' ') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td class="p-6">
+                            <div class="flex flex-col items-center gap-1.5">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full"
+                                        [class.bg-emerald-500]="policy.riskSnapshot?.riskLevel === 'LOW'"
+                                        [class.bg-amber-500]="policy.riskSnapshot?.riskLevel === 'MEDIUM'"
+                                        [class.bg-rose-500]="policy.riskSnapshot?.riskLevel === 'HIGH'">
+                                    </div>
+                                    <span class="text-[10px] font-black uppercase tracking-widest"
+                                        [class.text-emerald-700]="policy.riskSnapshot?.riskLevel === 'LOW'"
+                                        [class.text-amber-700]="policy.riskSnapshot?.riskLevel === 'MEDIUM'"
+                                        [class.text-rose-700]="policy.riskSnapshot?.riskLevel === 'HIGH'">
+                                        {{ policy.riskSnapshot?.riskLevel }}
+                                    </span>
+                                </div>
+                                <div
+                                    class="px-3 py-1 bg-white border border-line text-[11px] font-black tabular-nums shadow-sm">
+                                    {{ policy.riskSnapshot?.totalRiskScore }}
+                                </div>
+                            </div>
+                        </td>
+
+                        <td class="p-6 text-center">
+                            <p class="text-[11px] font-bold text-ink">{{ policy.startDate }}</p>
+                            <p class="text-[9px] text-muted font-bold uppercase tracking-tighter mt-0.5">Deployment
+                                Baseline</p>
+                        </td>
+
+                        <td class="p-6 text-right">
+                            <p class="text-base font-black text-primary tracking-tight">₹{{ (policy.premiumAmount ||
+                                0).toLocaleString() }}</p>
+                            <p class="text-[9px] text-muted font-bold uppercase tracking-widest">Adjusted Annual Rate
+                            </p>
+                        </td>
+
+                        <td class="p-6">
+                            <div
+                                class="flex items-center justify-end opacity-40 group-hover:opacity-100 transition-opacity">
+                                <a [routerLink]="['/admin/policy-review', policy.id]"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest bg-ink text-white hover:bg-primary shadow-lg active:scale-95 transition-all">
+                                    Review Application
+                                    <i data-lucide="arrow-right" size="14"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>

@@ -1,0 +1,150 @@
+<div id="topbar-container" data-title="Claims Officer Dashboard"></div>
+
+<main class="p-8 space-y-8">
+    @if (loading()) {
+        <div class="flex flex-col justify-center items-center py-20 space-y-4">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-line border-t-primary"></div>
+            <p class="text-xs font-bold text-muted uppercase tracking-widest animate-pulse">Scanning Claims Queue...</p>
+        </div>
+    } @else {
+        <!-- ⭐ KPI CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div (click)="statusFilter.set('ALL')" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-indigo-500 shadow-sm hover:shadow-md cursor-pointer group">
+                <div class="bg-indigo-50 p-4 text-indigo-600 group-hover:scale-110 transition-transform">
+                    <i data-lucide="files" size="28"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Total Assigned</p>
+                    <p class="text-3xl font-bold text-ink tracking-tight">{{ stats().total }}</p>
+                </div>
+            </div>
+
+            <div (click)="statusFilter.set('ASSIGNED_TO_OFFICER')" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-amber-500 shadow-sm hover:shadow-md cursor-pointer group">
+                <div class="bg-amber-50 p-4 text-amber-600 group-hover:scale-110 transition-transform">
+                    <i data-lucide="alert-circle" size="28"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">New Claims</p>
+                    <p class="text-3xl font-bold text-ink tracking-tight">{{ stats().pending }}</p>
+                </div>
+            </div>
+
+            <div (click)="statusFilter.set('UNDER_INVESTIGATION')" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-primary shadow-sm hover:shadow-md cursor-pointer group">
+                <div class="bg-primary/5 p-4 text-primary group-hover:scale-110 transition-transform">
+                    <i data-lucide="microscope" size="28"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">In Investigation</p>
+                    <p class="text-3xl font-bold text-ink tracking-tight">{{ stats().investigating }}</p>
+                </div>
+            </div>
+
+            <div (click)="statusFilter.set('OFFICER_RECOMMENDED')" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-emerald-500 shadow-sm hover:shadow-md cursor-pointer group">
+                <div class="bg-emerald-50 p-4 text-emerald-600 group-hover:scale-110 transition-transform">
+                    <i data-lucide="check-square" size="28"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Completed</p>
+                    <p class="text-3xl font-bold text-ink tracking-tight">{{ stats().recommended }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolbar & Search -->
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="relative w-full md:w-96">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size="14"></i>
+                <input type="text" 
+                       [(ngModel)]="searchTerm" (ngModelChange)="searchTerm.set($event)"
+                       placeholder="SEARCH RECORDS..." 
+                       class="w-full pl-10 pr-4 py-2 bg-white border border-line text-[10px] font-bold uppercase tracking-widest focus:border-primary outline-none transition-all shadow-sm">
+            </div>
+            
+            <div class="flex items-center gap-1 bg-surface p-1 border border-line shadow-sm">
+                <button (click)="statusFilter.set('ALL')" 
+                    [class]="'px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ' + (statusFilter() === 'ALL' ? 'bg-primary text-white' : 'text-muted hover:text-ink')">
+                    All
+                </button>
+                <button (click)="statusFilter.set('ASSIGNED_TO_OFFICER')" 
+                    [class]="'px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ' + (statusFilter() === 'ASSIGNED_TO_OFFICER' ? 'bg-primary text-white' : 'text-muted hover:text-ink')">
+                    Pending
+                </button>
+                <button (click)="statusFilter.set('UNDER_INVESTIGATION')" 
+                    [class]="'px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ' + (statusFilter() === 'UNDER_INVESTIGATION' ? 'bg-primary text-white' : 'text-muted hover:text-ink')">
+                    Active
+                </button>
+                <button (click)="statusFilter.set('OFFICER_RECOMMENDED')" 
+                    [class]="'px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all ' + (statusFilter() === 'OFFICER_RECOMMENDED' ? 'bg-primary text-white' : 'text-muted hover:text-ink')">
+                    Finished
+                </button>
+            </div>
+        </div>
+
+        <!-- Claims Table Card -->
+        <div class="card p-0 overflow-hidden shadow-sm">
+            <div class="p-6 border-b border-line bg-surface/50">
+                <h2 class="text-sm font-bold text-ink uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="shield-alert" size="18" class="text-primary"></i>
+                    Claims Investigation Workbench
+                </h2>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-background text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+                            <th class="px-6 py-4">Dossier</th>
+                            <th class="px-6 py-4">Customer & System</th>
+                            <th class="px-6 py-4">Loss Value</th>
+                            <th class="px-6 py-4 text-center">Filing Date</th>
+                            <th class="px-6 py-4 text-center">Status</th>
+                            <th class="px-6 py-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @for (claim of filteredClaims(); track claim.claimId) {
+                            <tr class="hover:bg-slate-50/50 transition-colors group">
+                                <td class="px-6 py-6">
+                                    <span class="text-xs font-bold text-muted group-hover:text-primary transition-colors">#CL-{{claim.claimId}}</span>
+                                </td>
+                                <td class="px-6 py-6">
+                                    <p class="text-[9px] font-bold text-primary uppercase tracking-widest mb-0.5">{{claim.companyName}}</p>
+                                    <h4 class="text-xs font-bold text-ink uppercase tracking-tight">{{claim.aiSystemName}}</h4>
+                                </td>
+                                <td class="px-6 py-6 font-bold text-ink italic">
+                                    ₹{{claim.claimAmount.toLocaleString()}}
+                                </td>
+                                <td class="px-6 py-6 text-center text-[10px] font-bold text-muted uppercase">
+                                    {{claim.claimDate | date:'dd MMM yyyy'}}
+                                </td>
+                                <td class="px-6 py-6 text-center">
+                                    <span [class]="'px-3 py-1 text-[9px] font-bold uppercase tracking-widest border ' + getStatusClass(claim.status)">
+                                        {{claim.status.replace('ASSIGNED_TO_OFFICER', 'PENDING').replace('UNDER_INVESTIGATION', 'ACTIVE').replace('OFFICER_RECOMMENDED', 'FINISHED')}}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-6 text-right">
+                                    <a [routerLink]="['/officer/investigate', claim.claimId]" 
+                                       class="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-[9px] font-bold uppercase tracking-widest hover:bg-primary transition-all active:scale-95 shadow-sm">
+                                        Analyze Case
+                                        <i data-lucide="arrow-right" size="14"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                        @if (filteredClaims().length === 0) {
+                            <tr>
+                                <td colspan="6" class="px-6 py-20 text-center">
+                                    <div class="flex flex-col items-center justify-center text-muted">
+                                        <i data-lucide="inbox" size="48" class="mb-4 opacity-50"></i>
+                                        <p class="text-sm font-bold uppercase tracking-widest">No Dossiers Found</p>
+                                        <p class="text-xs mt-2">No claims match the current filter criteria.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</main>

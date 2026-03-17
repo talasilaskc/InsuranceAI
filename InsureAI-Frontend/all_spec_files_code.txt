@@ -1,0 +1,2121 @@
+﻿
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\app.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { App } from './app';
+import { provideRouter } from '@angular/router';
+
+describe('App', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter([])]
+    }).compileComponents();
+  });
+
+  it('should create the app', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    expect(app).toBeTruthy();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\admin-policies\admin-policies.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AdminPolicies } from './admin-policies';
+import { AdminService } from '../../../services/admin/admin.service';
+import { of, throwError } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('AdminPolicies Component', () => {
+  let component: AdminPolicies;
+  let fixture: ComponentFixture<AdminPolicies>;
+  let adminServiceSpy: any;
+
+  beforeEach(async () => {
+    adminServiceSpy = {
+      getAllPolicies: vi.fn(),
+      title: { set: vi.fn() }
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AdminPolicies],
+      providers: [
+        { provide: AdminService, useValue: adminServiceSpy },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    adminServiceSpy.getAllPolicies.mockReturnValue(of([{ id: 1, name: 'Policy 1' }]));
+
+    fixture = TestBed.createComponent(AdminPolicies);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load policies on init', () => {
+    expect(adminServiceSpy.getAllPolicies).toHaveBeenCalled();
+    expect(component.policies.length).toBe(1);
+    expect(component.loading()).toBeFalsy();
+  });
+
+  it('should handle error on init', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    adminServiceSpy.getAllPolicies.mockReturnValue(throwError(() => ({ error: { message: 'Error' } })));
+    component.ngOnInit();
+    expect(alertSpy).toHaveBeenCalledWith('Error');
+    expect(component.loading()).toBeFalsy();
+    expect(component.error()).toBeTruthy();
+    alertSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\claim-review\claim-review.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ClaimReview } from './claim-review';
+import { ClaimService } from '../../../services/claim/claim.service';
+import { AdminService } from '../../../services/admin/admin.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('ClaimReview Component', () => {
+  let component: ClaimReview;
+  let fixture: ComponentFixture<ClaimReview>;
+  let claimServiceMock: any;
+  let adminServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    claimServiceMock = {
+      getAllClaims: vi.fn(),
+      approveClaim: vi.fn(),
+      rejectClaim: vi.fn()
+    };
+    adminServiceMock = { 
+      title: signal('') 
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ClaimReview],
+      providers: [
+        { provide: ClaimService, useValue: claimServiceMock },
+        { provide: AdminService, useValue: adminServiceMock },
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { 
+            snapshot: { 
+              params: { id: '1' },
+              paramMap: { get: () => '1' }
+            } 
+          }
+        }
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    claimServiceMock.getAllClaims.mockReturnValue(of([{ claimId: 1, verifiedLoss: 500 }]));
+
+    fixture = TestBed.createComponent(ClaimReview);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load claim on init', () => {
+    expect(component.claim()).toEqual({ claimId: 1, verifiedLoss: 500 });
+    expect(component.verifiedLoss()).toBe(500);
+  });
+
+  it('should navigate away if claim not found', () => {
+    claimServiceMock.getAllClaims.mockReturnValue(of([{ claimId: 2 }]));
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    component.ngOnInit();
+    expect(alertSpy).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/all-claims']);
+    alertSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\claims\claims.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Claims } from './claims';
+import { ClaimService } from '../../../services/claim/claim.service';
+import { AdminService } from '../../../services/admin/admin.service';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
+
+describe('Admin Claims Component', () => {
+  let component: Claims;
+  let fixture: ComponentFixture<Claims>;
+  let claimServiceSpy: any;
+  let adminServiceSpy: any;
+
+  beforeEach(async () => {
+    claimServiceSpy = {
+      getAllClaims: vi.fn(),
+      approveClaim: vi.fn(),
+      rejectClaim: vi.fn()
+    };
+    adminServiceSpy = { title: { set: vi.fn() } };
+
+    await TestBed.configureTestingModule({
+      imports: [Claims],
+      providers: [
+        { provide: ClaimService, useValue: claimServiceSpy },
+        { provide: AdminService, useValue: adminServiceSpy }
+      ]
+    }).compileComponents();
+
+    claimServiceSpy.getAllClaims.mockReturnValue(of([{ claimId: 1, status: 'SUBMITTED' }]));
+
+    fixture = TestBed.createComponent(Claims);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load claims on init', () => {
+    expect(claimServiceSpy.getAllClaims).toHaveBeenCalled();
+    expect(component.claims().length).toBe(1);
+    expect(component.totalClaims()).toBe(1);
+  });
+
+  it('should filter claims by status', () => {
+    component.statusFilter.set('APPROVED');
+    expect(component.filteredClaims().length).toBe(0);
+    
+    component.statusFilter.set('SUBMITTED');
+    expect(component.filteredClaims().length).toBe(1);
+  });
+
+  it('should approve claim', () => {
+    claimServiceSpy.approveClaim.mockReturnValue(of({}));
+    component.verifiedLossInputs[1] = 1000;
+    
+    component.approveClaim({ claimId: 1 });
+    
+    expect(claimServiceSpy.approveClaim).toHaveBeenCalledWith(1, 1000);
+    expect(component.claims()[0].status).toBe('APPROVED');
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\dashboard\dashboard.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AdminDashboard } from './dashboard';
+import { AdminService } from '../../../services/admin/admin.service';
+import { of, throwError } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('AdminDashboard Component', () => {
+  let component: AdminDashboard;
+  let fixture: ComponentFixture<AdminDashboard>;
+  let adminServiceMock: any;
+
+  beforeEach(async () => {
+    adminServiceMock = {
+      getDashboard: vi.fn(),
+      title: signal('')
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AdminDashboard],
+      providers: [
+        { provide: AdminService, useValue: adminServiceMock },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    adminServiceMock.getDashboard.mockReturnValue(of({ totalPolicies: 10 }));
+
+    fixture = TestBed.createComponent(AdminDashboard);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load dashboard data on init', () => {
+    expect(adminServiceMock.getDashboard).toHaveBeenCalled();
+    expect(component.dashboard.totalPolicies).toBe(10);
+    expect(component.loading()).toBeFalsy();
+  });
+
+  it('should handle error on init', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    adminServiceMock.getDashboard.mockReturnValue(throwError(() => ({ error: { message: 'Error' } })));
+    component.ngOnInit();
+    expect(alertSpy).toHaveBeenCalledWith('Error');
+    expect(component.loading()).toBeFalsy();
+    alertSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\pending-policies\pending-policies.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PendingPolicies } from './pending-policies';
+import { AdminService } from '../../../services/admin/admin.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('PendingPolicies Component', () => {
+  let component: PendingPolicies;
+  let fixture: ComponentFixture<PendingPolicies>;
+  let adminServiceSpy: any;
+
+  beforeEach(async () => {
+    adminServiceSpy = {
+      getPendingPolicies: vi.fn(),
+      approvePolicy: vi.fn(),
+      rejectPolicy: vi.fn(),
+      title: { set: vi.fn() }
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PendingPolicies],
+      providers: [
+        { provide: AdminService, useValue: adminServiceSpy },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    adminServiceSpy.getPendingPolicies.mockReturnValue(of([{ id: 1, riskSnapshot: { riskLevel: 'HIGH' } }]));
+
+    fixture = TestBed.createComponent(PendingPolicies);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load pending policies on init', () => {
+    expect(adminServiceSpy.getPendingPolicies).toHaveBeenCalled();
+    expect(component.pendingPolicies().length).toBe(1);
+    expect(component.highRiskCount()).toBe(1);
+  });
+
+  it('should approve policy', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    adminServiceSpy.approvePolicy.mockReturnValue(of({}));
+    
+    component.approve(1);
+    
+    expect(adminServiceSpy.approvePolicy).toHaveBeenCalledWith(1);
+    expect(adminServiceSpy.getPendingPolicies).toHaveBeenCalledTimes(2);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\policy-management\policy-management.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PolicyManagement } from './policy-management';
+import { AdminService } from '../../../services/admin/admin.service';
+import { PolicyTypeService } from '../../../services/policy-type/policy-type.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('PolicyManagement Component', () => {
+  let component: PolicyManagement;
+  let fixture: ComponentFixture<PolicyManagement>;
+  let adminServiceSpy: any;
+  let policyTypeServiceSpy: any;
+
+  beforeEach(async () => {
+    adminServiceSpy = { title: { set: vi.fn() } };
+    policyTypeServiceSpy = {
+      getPolicyTypes: vi.fn(),
+      deletePolicyType: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PolicyManagement],
+      providers: [
+        { provide: AdminService, useValue: adminServiceSpy },
+        { provide: PolicyTypeService, useValue: policyTypeServiceSpy },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    policyTypeServiceSpy.getPolicyTypes.mockReturnValue(of([{ id: 1, name: 'P1', active: true }]));
+
+    fixture = TestBed.createComponent(PolicyManagement);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load policy types on init', () => {
+    expect(policyTypeServiceSpy.getPolicyTypes).toHaveBeenCalled();
+    expect(component.policyTypes().length).toBe(1);
+    expect(component.activeCount()).toBe(1);
+  });
+
+  it('should deactivate policy type', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    policyTypeServiceSpy.deletePolicyType.mockReturnValue(of({}));
+    
+    component.deactivate(1);
+    
+    expect(policyTypeServiceSpy.deletePolicyType).toHaveBeenCalledWith(1);
+    expect(component.policyTypes()[0].active).toBeFalsy();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\policy-review\policy-review.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PolicyReview } from './policy-review';
+import { AdminService } from '../../../services/admin/admin.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('PolicyReview Component', () => {
+  let component: PolicyReview;
+  let fixture: ComponentFixture<PolicyReview>;
+  let adminServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    adminServiceMock = {
+      getPolicyById: vi.fn(),
+      approvePolicy: vi.fn(),
+      rejectPolicy: vi.fn(),
+      title: signal('')
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PolicyReview],
+      providers: [
+        { provide: AdminService, useValue: adminServiceMock },
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { 
+            snapshot: { 
+              params: { id: '1' },
+              paramMap: { get: () => '1' } 
+            } 
+          }
+        }
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    adminServiceMock.getPolicyById.mockReturnValue(of({ id: 1, name: 'Test Policy' }));
+
+    fixture = TestBed.createComponent(PolicyReview);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load policy details on init', () => {
+    expect(adminServiceMock.getPolicyById).toHaveBeenCalledWith('1');
+    expect(component.policy().id).toBe(1);
+    expect(component.loading()).toBeFalsy();
+  });
+
+  it('should approve policy and navigate', () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    adminServiceMock.approvePolicy.mockReturnValue(of({}));
+    
+    component.approvePolicy();
+    
+    expect(adminServiceMock.approvePolicy).toHaveBeenCalledWith(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/pending-policies']);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\admin\policy-type-form\policy-type-form.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { PolicyTypeForm } from './policy-type-form';
+import { AdminService } from '../../../services/admin/admin.service';
+import { PolicyTypeService } from '../../../services/policy-type/policy-type.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('PolicyTypeForm Component', () => {
+  let component: PolicyTypeForm;
+  let fixture: ComponentFixture<PolicyTypeForm>;
+  let adminServiceMock: any;
+  let policyTypeServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    adminServiceMock = { 
+      title: signal('') 
+    };
+    policyTypeServiceMock = {
+      getPolicyTypes: vi.fn(),
+      createPolicyType: vi.fn(),
+      updatePolicyType: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [PolicyTypeForm],
+      providers: [
+        { provide: AdminService, useValue: adminServiceMock },
+        { provide: PolicyTypeService, useValue: policyTypeServiceMock },
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: { get: () => null } } }
+        },
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    fixture = TestBed.createComponent(PolicyTypeForm);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create in create mode', () => {
+    expect(component).toBeTruthy();
+    expect(component.isEditMode()).toBeFalsy();
+  });
+
+  it('should create policy type on submit', () => {
+    policyTypeServiceMock.createPolicyType.mockReturnValue(of({}));
+    component.form.patchValue({
+      name: 'New',
+      description: 'Desc',
+      basePrice: 100,
+      minCoverage: 50,
+      maxCoverage: 200
+    });
+    
+    component.submit();
+    
+    expect(policyTypeServiceMock.createPolicyType).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/all-policies']);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\ai-systems\ai-systems\ai-systems.spec.ts
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { AiSystems } from './ai-systems';
+import { AiSystemService } from '../../../../services/ai-system/ai-system.service';
+import { CompanyService } from '../../../../services/company/company.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('AiSystems Component', () => {
+  let component: AiSystems;
+  let fixture: ComponentFixture<AiSystems>;
+  let aiServiceMock: any;
+  let companyServiceMock: any;
+
+  beforeEach(async () => {
+    aiServiceMock = { getSystems: vi.fn() };
+    companyServiceMock = { 
+      title: signal('') 
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AiSystems],
+      providers: [
+        { provide: AiSystemService, useValue: aiServiceMock },
+        { provide: CompanyService, useValue: companyServiceMock },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    aiServiceMock.getSystems.mockReturnValue(of([{ id: 1, name: 'S1', modelType: 'LLM' }]));
+
+    fixture = TestBed.createComponent(AiSystems);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load systems on init', () => {
+    expect(aiServiceMock.getSystems).toHaveBeenCalled();
+    expect(component.systems().length).toBe(1);
+    expect(component.loading()).toBeFalsy();
+  });
+
+  it('should return correct icon for model type', () => {
+    expect(component.getSystemIcon('LLM')).toBe('bot');
+    expect(component.getSystemIcon('NLP')).toBe('message-square');
+    expect(component.getSystemIcon('UNKNOWN')).toBe('cpu');
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\ai-systems\register-ai-system\register-ai-system.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RegisterAiSystem } from './register-ai-system';
+import { AiSystemService } from '../../../../services/ai-system/ai-system.service';
+import { CompanyService } from '../../../../services/company/company.service';
+import { Router } from '@angular/router';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('RegisterAiSystem Component', () => {
+  let component: RegisterAiSystem;
+  let fixture: ComponentFixture<RegisterAiSystem>;
+  let aiServiceSpy: any;
+  let companyServiceSpy: any;
+  let routerSpy: any;
+
+  beforeEach(async () => {
+    aiServiceSpy = { createSystem: vi.fn() };
+    companyServiceSpy = { title: { set: vi.fn() } };
+    routerSpy = { navigate: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [RegisterAiSystem],
+      providers: [
+        { provide: AiSystemService, useValue: aiServiceSpy },
+        { provide: CompanyService, useValue: companyServiceSpy },
+        { provide: Router, useValue: routerSpy },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RegisterAiSystem);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should register AI system on submit', () => {
+    aiServiceSpy.createSystem.mockReturnValue(of({}));
+    component.aiForm.patchValue({
+      name: 'New AI',
+      ownershipType: 'In-house',
+      deploymentType: 'Cloud',
+      modelType: 'LLM',
+      dataExposureCategory: 'Public'
+    });
+    
+    component.submit();
+    
+    expect(aiServiceSpy.createSystem).toHaveBeenCalled();
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/company/ai-system']);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\claims\claim-history\claim-history.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ClaimHistory } from './claim-history';
+import { AdminService } from '../../../../services/admin/admin.service';
+import { ClaimService } from '../../../../services/claim/claim.service';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
+
+describe('ClaimHistory Component', () => {
+  let component: ClaimHistory;
+  let fixture: ComponentFixture<ClaimHistory>;
+  let adminServiceSpy: any;
+  let claimServiceSpy: any;
+
+  beforeEach(async () => {
+    adminServiceSpy = { title: { set: vi.fn() } };
+    claimServiceSpy = { getCompanyClaims: vi.fn() };
+
+    await TestBed.configureTestingModule({
+      imports: [ClaimHistory],
+      providers: [
+        { provide: AdminService, useValue: adminServiceSpy },
+        { provide: ClaimService, useValue: claimServiceSpy }
+      ]
+    }).compileComponents();
+
+    claimServiceSpy.getCompanyClaims.mockReturnValue(of([{ claimId: 1, claimAmount: 1000, status: 'APPROVED', payoutAmount: 800 }]));
+
+    fixture = TestBed.createComponent(ClaimHistory);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load claims and compute totals', () => {
+    expect(claimServiceSpy.getCompanyClaims).toHaveBeenCalled();
+    expect(component.claims().length).toBe(1);
+    expect(component.totalClaimed()).toBe(1000);
+    expect(component.approvedAmount()).toBe(800);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\claims\claims\claims.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Claims } from './claims';
+import { AdminService } from '../../../../services/admin/admin.service';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('Claims Component', () => {
+  let component: Claims;
+  let fixture: ComponentFixture<Claims>;
+  let adminServiceMock: any;
+
+  beforeEach(async () => {
+    adminServiceMock = { 
+      title: signal('') 
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [Claims],
+      providers: [
+        { provide: AdminService, useValue: adminServiceMock }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(Claims);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should set title on init', () => {
+    expect(adminServiceMock.title()).toBe('All Claims');
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\claims\submit-claim\submit-claim.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SubmitClaim } from './submit-claim';
+import { ClaimService } from '../../../../services/claim/claim.service';
+import { PolicyService } from '../../../../services/policy/policy.service';
+import { AdminService } from '../../../../services/admin/admin.service';
+import { Router, ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('SubmitClaim Component', () => {
+  let component: SubmitClaim;
+  let fixture: ComponentFixture<SubmitClaim>;
+  let claimServiceMock: any;
+  let policyServiceMock: any;
+  let adminServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    claimServiceMock = { submitClaim: vi.fn() };
+    policyServiceMock = { getMyPolicies: vi.fn() };
+    adminServiceMock = { 
+      title: signal('') 
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [SubmitClaim],
+      providers: [
+        { provide: ClaimService, useValue: claimServiceMock },
+        { provide: PolicyService, useValue: policyServiceMock },
+        { provide: AdminService, useValue: adminServiceMock },
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { 
+            snapshot: { 
+              queryParamMap: { get: () => '1' } 
+            },
+            queryParamMap: of({ get: () => '1' })
+          }
+        }
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    policyServiceMock.getMyPolicies.mockReturnValue(of([{ id: 1, name: 'P1' }]));
+
+    fixture = TestBed.createComponent(SubmitClaim);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load policies and pre-select on init', () => {
+    expect(policyServiceMock.getMyPolicies).toHaveBeenCalled();
+    expect(component.policies().length).toBe(1);
+    expect(component.form.value.policyId).toBe('1');
+  });
+
+  it('should submit claim successfully', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    claimServiceMock.submitClaim.mockReturnValue(of({}));
+    component.form.patchValue({
+      policyId: '1',
+      claimAmount: '500',
+      claimDescription: 'Test claim description longer than 10'
+    });
+    
+    component.submit();
+    
+    expect(claimServiceMock.submitClaim).toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/company/claim-history']);
+    alertSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\dashboard\dashboard.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CompanyDashboard } from './dashboard';
+import { CompanyService } from '../../../services/company/company.service';
+import { of, throwError } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('CompanyDashboard Component', () => {
+  let component: CompanyDashboard;
+  let fixture: ComponentFixture<CompanyDashboard>;
+  let companyServiceSpy: any;
+
+  beforeEach(async () => {
+    companyServiceSpy = {
+      getDashboard: vi.fn(),
+      title: { set: vi.fn() }
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [CompanyDashboard],
+      providers: [
+        { provide: CompanyService, useValue: companyServiceSpy },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    companyServiceSpy.getDashboard.mockReturnValue(of({ activePolicies: 5 }));
+
+    fixture = TestBed.createComponent(CompanyDashboard);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load dashboard data on init', () => {
+    expect(companyServiceSpy.getDashboard).toHaveBeenCalled();
+    expect(component.dashboard.activePolicies).toBe(5);
+    expect(component.loading()).toBeFalsy();
+  });
+
+  it('should handle error on init', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    companyServiceSpy.getDashboard.mockReturnValue(throwError(() => ({ error: { message: 'Error' } })));
+    component.ngOnInit();
+    expect(alertSpy).toHaveBeenCalledWith('Error');
+    expect(component.loading()).toBeFalsy();
+    expect(component.error()).toBeTruthy();
+    alertSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\policies\apply-policy\apply-policy.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ApplyPolicy } from './apply-policy';
+import { AiSystemService } from '../../../../services/ai-system/ai-system.service';
+import { PolicyService } from '../../../../services/policy/policy.service';
+import { CompanyService } from '../../../../services/company/company.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('ApplyPolicy Component', () => {
+  let component: ApplyPolicy;
+  let fixture: ComponentFixture<ApplyPolicy>;
+  let aiServiceMock: any;
+  let policyServiceMock: any;
+  let companyServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    aiServiceMock = { getSystems: vi.fn() };
+    policyServiceMock = { getPolicyTypes: vi.fn(), issuePolicy: vi.fn() };
+    companyServiceMock = { 
+      title: signal('') 
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ApplyPolicy],
+      providers: [
+        { provide: AiSystemService, useValue: aiServiceMock },
+        { provide: PolicyService, useValue: policyServiceMock },
+        { provide: CompanyService, useValue: companyServiceMock },
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { 
+              paramMap: { get: () => '1' } 
+            },
+            queryParamMap: of({ get: () => '123' })
+          }
+        }
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    aiServiceMock.getSystems.mockReturnValue(of([{ id: 123, name: 'S1' }]));
+    policyServiceMock.getPolicyTypes.mockReturnValue(of([{ id: 1, name: 'P1', minCoverage: 10000 }]));
+
+    fixture = TestBed.createComponent(ApplyPolicy);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load data and pre-fill form on init', () => {
+    expect(aiServiceMock.getSystems).toHaveBeenCalled();
+    expect(policyServiceMock.getPolicyTypes).toHaveBeenCalled();
+    expect(component.selectedPolicy().name).toBe('P1');
+    expect(component.form.value.coverageLimit).toBe(10000);
+    expect(component.form.value.aiSystemId).toBe('123');
+  });
+
+  it('should submit policy application', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    policyServiceMock.issuePolicy.mockReturnValue(of({}));
+    component.form.patchValue({ aiSystemId: '123' });
+    
+    component.submit();
+    
+    expect(policyServiceMock.issuePolicy).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/company/my-policies']);
+    alertSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\policies\my-policies\my-policies.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MyPolicies } from './my-policies';
+import { PolicyService } from '../../../../services/policy/policy.service';
+import { CompanyService } from '../../../../services/company/company.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('MyPolicies Component', () => {
+  let component: MyPolicies;
+  let fixture: ComponentFixture<MyPolicies>;
+  let policyServiceSpy: any;
+  let companyServiceSpy: any;
+
+  beforeEach(async () => {
+    policyServiceSpy = { getMyPolicies: vi.fn() };
+    companyServiceSpy = { title: { set: vi.fn() } };
+
+    await TestBed.configureTestingModule({
+      imports: [MyPolicies],
+      providers: [
+        { provide: PolicyService, useValue: policyServiceSpy },
+        { provide: CompanyService, useValue: companyServiceSpy },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    policyServiceSpy.getMyPolicies.mockReturnValue(of([{ policyId: 1, status: 'ACTIVE', aiSystemId: 101 }]));
+
+    fixture = TestBed.createComponent(MyPolicies);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load policies on init', () => {
+    expect(policyServiceSpy.getMyPolicies).toHaveBeenCalled();
+    expect(component.policies().length).toBe(1);
+    expect(component.loading()).toBeFalsy();
+  });
+
+  it('should filter policies by search term', () => {
+    component.searchTerm.set('ACTIVE');
+    expect(component.filteredPolicies().length).toBe(1);
+    
+    component.searchTerm.set('NONEXISTENT');
+    expect(component.filteredPolicies().length).toBe(0);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\policies\policies\policies.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Policies } from './policies';
+import { PolicyService } from '../../../../services/policy/policy.service';
+import { CompanyService } from '../../../../services/company/company.service';
+import { Router } from '@angular/router';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('Policies Component', () => {
+  let component: Policies;
+  let fixture: ComponentFixture<Policies>;
+  let policyServiceMock: any;
+  let companyServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    policyServiceMock = { 
+      getPolicyTypes: vi.fn() 
+    };
+    companyServiceMock = { 
+      title: signal(''),
+      getRiskScore: vi.fn().mockReturnValue(of(null))
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [Policies],
+      providers: [
+        { provide: PolicyService, useValue: policyServiceMock },
+        { provide: CompanyService, useValue: companyServiceMock },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    policyServiceMock.getPolicyTypes.mockReturnValue(of([{ 
+      id: 1, 
+      name: 'Policy 1', 
+      minCoverage: 1000, 
+      maxCoverage: 5000, 
+      basePrice: 500,
+      description: 'Test description'
+    }]));
+
+    fixture = TestBed.createComponent(Policies);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load policies on init', () => {
+    expect(policyServiceMock.getPolicyTypes).toHaveBeenCalled();
+    expect(component.policies().length).toBe(1);
+    expect(component.loading()).toBeFalsy();
+  });
+
+  it('should navigate to apply policy', () => {
+    component.applyPolicy(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/company/apply-policy', 1], { queryParams: {} });
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\risk-assessment\risk.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { Risk } from './risk';
+
+describe('Risk', () => {
+  let service: Risk;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [Risk]
+    });
+    service = TestBed.inject(Risk);
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\customers\risk-assessment\risk-assessment\risk-assessment.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RiskAssessment } from './risk-assessment';
+import { AiSystemService } from '../../../../services/ai-system/ai-system.service';
+import { RiskService } from '../../../../services/risk/risk.service';
+import { CompanyService } from '../../../../services/company/company.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { vi } from 'vitest';
+
+describe('RiskAssessment Component', () => {
+  let component: RiskAssessment;
+  let fixture: ComponentFixture<RiskAssessment>;
+  let aiServiceMock: any;
+  let riskServiceMock: any;
+  let companyServiceMock: any;
+
+  beforeEach(async () => {
+    aiServiceMock = { getSystems: vi.fn() };
+    riskServiceMock = { createRisk: vi.fn() };
+    companyServiceMock = { 
+      title: signal('') 
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [RiskAssessment],
+      providers: [
+        { provide: AiSystemService, useValue: aiServiceMock },
+        { provide: RiskService, useValue: riskServiceMock },
+        { provide: CompanyService, useValue: companyServiceMock },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    aiServiceMock.getSystems.mockReturnValue(of([{ id: 1, name: 'S1' }]));
+
+    fixture = TestBed.createComponent(RiskAssessment);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should load systems on init', () => {
+    expect(aiServiceMock.getSystems).toHaveBeenCalled();
+    expect(component.systems().length).toBe(1);
+  });
+
+  it('should submit risk assessment', () => {
+    riskServiceMock.createRisk.mockReturnValue(of({ riskScore: 75 }));
+    component.riskForm.patchValue({
+      aiSystemId: '1',
+      dataExposureCategory: 'Public',
+      financialImpactLevel: 'High'
+    });
+    
+    component.submit();
+    
+    expect(riskServiceMock.createRisk).toHaveBeenCalled();
+    expect(component.riskResult()).toEqual({ riskScore: 75 });
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\shared\auth\login\login.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Login } from './login';
+import { AuthService } from '../../../../services/auth/auth.service';
+import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('Login Component', () => {
+  let component: Login;
+  let fixture: ComponentFixture<Login>;
+  let authServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    authServiceMock = {
+      login: vi.fn(),
+      getUserRole: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [Login],
+      providers: [
+        { provide: AuthService, useValue: authServiceMock },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    fixture = TestBed.createComponent(Login);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should navigate to admin dashboard on successful admin login', () => {
+    const mockResponse = { token: 'admin-token' };
+    authServiceMock.login.mockReturnValue(of(mockResponse));
+    authServiceMock.getUserRole.mockReturnValue('ROLE_ADMIN');
+
+    component.email.set('admin@test.com');
+    component.password.set('password');
+    component.login();
+
+    expect(authServiceMock.login).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/admin/dashboard']);
+  });
+
+  it('should navigate to company dashboard on successful user login', () => {
+    const mockResponse = { token: 'user-token' };
+    authServiceMock.login.mockReturnValue(of(mockResponse));
+    authServiceMock.getUserRole.mockReturnValue('ROLE_USER');
+
+    component.email.set('user@test.com');
+    component.password.set('password');
+    component.login();
+
+    expect(authServiceMock.login).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/company/dashboard']);
+  });
+
+  it('should alert on login failure', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    authServiceMock.login.mockReturnValue(throwError(() => ({ error: { message: 'Invalid credentials' } })));
+
+    component.login();
+
+    expect(alertSpy).toHaveBeenCalledWith('Invalid credentials');
+    alertSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\shared\auth\register\register.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Register } from './register';
+import { ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../../../services/auth/auth.service';
+import { of } from 'rxjs';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('Register Component', () => {
+  let component: Register;
+  let fixture: ComponentFixture<Register>;
+  let authServiceMock: any;
+  let router: Router;
+
+  beforeEach(async () => {
+    authServiceMock = {
+      register: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [Register, ReactiveFormsModule],
+      providers: [
+        { provide: AuthService, useValue: authServiceMock },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    fixture = TestBed.createComponent(Register);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should register successfully and navigate to login', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    authServiceMock.register.mockReturnValue(of({}));
+
+    component.registerForm.patchValue({
+      name: 'Test Company',
+      industry: 'Tech',
+      country: 'USA',
+      companySize: 'Small',
+      annualRevenue: '100000',
+      email: 'test@comp.com',
+      password: 'password123',
+      confirmPassword: 'password123',
+      termsAccepted: true
+    });
+
+    component.register();
+
+    expect(authServiceMock.register).toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith('Registration successful!');
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    alertSpy.mockRestore();
+  });
+
+  it('should not call register if form is invalid', () => {
+    component.registerForm.patchValue({ email: 'invalid-email' });
+    component.register();
+    expect(authServiceMock.register).not.toHaveBeenCalled();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\shared\components\navbar\navbar.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Navbar } from './navbar';
+import { AuthService } from '../../../../services/auth/auth.service';
+import { Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('Navbar Component', () => {
+  let component: Navbar;
+  let fixture: ComponentFixture<Navbar>;
+  let authServiceSpy: any;
+  let routerSpy: any;
+
+  beforeEach(async () => {
+    authServiceSpy = {
+      getUserEmail: vi.fn(),
+      getUserRole: vi.fn(),
+      logout: vi.fn()
+    };
+    routerSpy = {
+      navigate: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [Navbar],
+      providers: [
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: Router, useValue: routerSpy },
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(Navbar);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should set email and role on init', () => {
+    authServiceSpy.getUserEmail.mockReturnValue('test@test.com');
+    authServiceSpy.getUserRole.mockReturnValue('ROLE_ADMIN');
+    
+    component.ngOnInit();
+    
+    expect(component.email()).toBe('test@test.com');
+    expect(component.role()).toBe('ROLE_ADMIN');
+  });
+
+  it('should logout and navigate to login', () => {
+    component.logout();
+    expect(authServiceSpy.logout).toHaveBeenCalled();
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\shared\components\sidebar\sidebar.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Sidebar } from './sidebar';
+import { provideRouter, Router } from '@angular/router';
+import { vi } from 'vitest';
+
+describe('Sidebar Component', () => {
+  let component: Sidebar;
+  let fixture: ComponentFixture<Sidebar>;
+  let router: Router;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [Sidebar],
+      providers: [
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigate');
+
+    fixture = TestBed.createComponent(Sidebar);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should compute company links by default', () => {
+    expect(component.links()).toEqual(component.companyLinks);
+  });
+
+  it('should compute admin links when role is admin', async () => {
+    fixture.componentRef.setInput('role', 'admin');
+    fixture.detectChanges();
+    expect(component.links()).toEqual(component.adminLinks);
+  });
+
+  it('should logout and navigate to login', () => {
+    const clearSpy = vi.spyOn(Storage.prototype, 'clear').mockImplementation(() => {});
+    component.logout();
+    expect(clearSpy).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    clearSpy.mockRestore();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\shared\home\home.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Home } from './home';
+import { provideRouter } from '@angular/router';
+
+describe('Home Component', () => {
+  let component: Home;
+  let fixture: ComponentFixture<Home>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [Home],
+      providers: [provideRouter([])]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(Home);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should have policies defined', () => {
+    expect(component.policies.length).toBeGreaterThan(0);
+    expect(component.policies[0].title).toBe('Algorithmic Liability');
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\shared\layout\admin-layout\admin-layout.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AdminLayout } from './admin-layout';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { AuthService } from '../../../../services/auth/auth.service';
+import { vi } from 'vitest';
+
+describe('AdminLayout Component', () => {
+  let component: AdminLayout;
+  let fixture: ComponentFixture<AdminLayout>;
+  let authServiceMock: any;
+
+  beforeEach(async () => {
+    authServiceMock = {
+      getUserEmail: vi.fn().mockReturnValue('admin@test.com'),
+      getUserRole: vi.fn().mockReturnValue('ROLE_ADMIN'),
+      logout: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [AdminLayout],
+      providers: [
+        { provide: AuthService, useValue: authServiceMock },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(AdminLayout);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\features\shared\layout\company-layout\company-layout.spec.ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CompanyLayout } from './company-layout';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { AuthService } from '../../../../services/auth/auth.service';
+import { vi } from 'vitest';
+
+describe('CompanyLayout Component', () => {
+  let component: CompanyLayout;
+  let fixture: ComponentFixture<CompanyLayout>;
+  let authServiceMock: any;
+
+  beforeEach(async () => {
+    authServiceMock = {
+      getUserEmail: vi.fn().mockReturnValue('user@test.com'),
+      getUserRole: vi.fn().mockReturnValue('ROLE_COMPANY'),
+      logout: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [CompanyLayout],
+      providers: [
+        { provide: AuthService, useValue: authServiceMock },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([])
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CompanyLayout);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\guards\auth-guard.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { authGuard } from './auth-guard';
+import { AuthService } from '../services/auth/auth.service';
+import { vi } from 'vitest';
+
+describe('authGuard', () => {
+  let authServiceSpy: any;
+  let routerSpy: any;
+
+  beforeEach(() => {
+    authServiceSpy = { isloggedIn: vi.fn() };
+    routerSpy = { parseUrl: vi.fn() };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: Router, useValue: routerSpy }
+      ]
+    });
+  });
+
+  it('should allow activation if logged in', () => {
+    authServiceSpy.isloggedIn.mockReturnValue(true);
+    const result = TestBed.runInInjectionContext(() => authGuard({} as any, {} as any));
+    expect(result).toBeTruthy();
+  });
+
+  it('should redirect to login if not logged in', () => {
+    authServiceSpy.isloggedIn.mockReturnValue(false);
+    routerSpy.parseUrl.mockReturnValue('/login' as any);
+    const result = TestBed.runInInjectionContext(() => authGuard({} as any, {} as any));
+    expect(result).toBe('/login');
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\guards\guest-guard.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { guestGuard } from './guest-guard';
+import { AuthService } from '../services/auth/auth.service';
+import { vi } from 'vitest';
+
+describe('guestGuard', () => {
+  let authServiceSpy: any;
+  let routerSpy: any;
+
+  beforeEach(() => {
+    authServiceSpy = { isloggedIn: vi.fn(), getUserRole: vi.fn() };
+    routerSpy = { parseUrl: vi.fn() };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: Router, useValue: routerSpy }
+      ]
+    });
+  });
+
+  it('should allow activation if not logged in', () => {
+    authServiceSpy.isloggedIn.mockReturnValue(false);
+    const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
+    expect(result).toBeTruthy();
+  });
+
+  it('should redirect to admin dashboard if logged in as admin', () => {
+    authServiceSpy.isloggedIn.mockReturnValue(true);
+    authServiceSpy.getUserRole.mockReturnValue('ROLE_ADMIN');
+    routerSpy.parseUrl.mockReturnValue('/admin/dashboard' as any);
+    
+    const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
+    expect(result).toBe('/admin/dashboard');
+  });
+
+  it('should redirect to company dashboard if logged in as company', () => {
+    authServiceSpy.isloggedIn.mockReturnValue(true);
+    authServiceSpy.getUserRole.mockReturnValue('ROLE_COMPANY');
+    routerSpy.parseUrl.mockReturnValue('/company/dashboard' as any);
+    
+    const result = TestBed.runInInjectionContext(() => guestGuard({} as any, {} as any));
+    expect(result).toBe('/company/dashboard');
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\guards\role-guard-guard.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { roleGuard } from './role-guard';
+import { AuthService } from '../services/auth/auth.service';
+import { vi } from 'vitest';
+
+describe('roleGuard', () => {
+  let authServiceSpy: any;
+  let routerSpy: any;
+
+  beforeEach(() => {
+    authServiceSpy = { getUserRole: vi.fn() };
+    routerSpy = { parseUrl: vi.fn() };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: Router, useValue: routerSpy }
+      ]
+    });
+  });
+
+  it('should allow activation if user has correct role', () => {
+    authServiceSpy.getUserRole.mockReturnValue('ROLE_ADMIN');
+    const route = { data: { role: 'ROLE_ADMIN' } } as any;
+    const result = TestBed.runInInjectionContext(() => roleGuard(route, {} as any));
+    expect(result).toBeTruthy();
+  });
+
+  it('should redirect if user has wrong role', () => {
+    authServiceSpy.getUserRole.mockReturnValue('ROLE_USER');
+    routerSpy.parseUrl.mockReturnValue('/login' as any);
+    const route = { data: { role: 'ROLE_ADMIN' } } as any;
+    const result = TestBed.runInInjectionContext(() => roleGuard(route, {} as any));
+    expect(result).toBe('/login');
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\interceptors\auth-interceptor.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { HttpRequest, HttpHandlerFn, HttpEvent } from '@angular/common/http';
+import { authInterceptor } from './auth-interceptor';
+import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { vi } from 'vitest';
+
+describe('authInterceptor', () => {
+  let routerSpy: any;
+
+  beforeEach(() => {
+    routerSpy = { navigate: vi.fn() };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Router, useValue: routerSpy }
+      ]
+    });
+    localStorage.clear();
+  });
+
+  it('should add Authorization header if token exists', () => {
+    localStorage.setItem('token', 'fake-token');
+    const req = new HttpRequest('GET', '/api/data');
+    const next: HttpHandlerFn = (request: HttpRequest<any>) => {
+      expect(request.headers.get('Authorization')).toBe('Bearer fake-token');
+      return of({} as HttpEvent<any>);
+    };
+
+    TestBed.runInInjectionContext(() => authInterceptor(req, next));
+  });
+
+  it('should redirect to login on 401 error', () => {
+    localStorage.setItem('token', 'fake-token');
+    const req = new HttpRequest('GET', '/api/data');
+    const next: HttpHandlerFn = () => throwError(() => ({ status: 401 }));
+
+    TestBed.runInInjectionContext(() => authInterceptor(req, next).subscribe({
+      error: () => {
+        expect(localStorage.getItem('token')).toBeNull();
+        expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
+      }
+    }));
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\admin\admin.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { AdminService } from './admin.service';
+
+describe('AdminService', () => {
+  let service: AdminService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        AdminService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(AdminService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should fetch pending policies', () => {
+    const mockPolicies = [{ id: 1, name: 'Policy 1' }];
+    
+    service.getPendingPolicies().subscribe(policies => {
+      expect(policies.length).toBe(1);
+      expect(policies).toEqual(mockPolicies);
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/admin/policies/pending');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPolicies);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\ai-system\ai-system.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { AiSystemService } from './ai-system.service';
+
+describe('AiSystemService', () => {
+  let service: AiSystemService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        AiSystemService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(AiSystemService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should fetch systems', () => {
+    const mockSystems = [{ id: 1, name: 'AI 1' }];
+    
+    service.getSystems().subscribe(systems => {
+      expect(systems.length).toBe(1);
+      expect(systems).toEqual(mockSystems);
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/ai-system');
+    expect(req.request.method).toBe('GET');
+    req.flush(mockSystems);
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\auth\auth.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { AuthService } from './auth.service';
+
+describe('AuthService', () => {
+  let service: AuthService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        AuthService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(AuthService);
+    httpMock = TestBed.inject(HttpTestingController);
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should login and return response', () => {
+    const mockResponse = { token: 'fake-token' };
+    const credentials = { email: 'test@test.com', password: 'password' };
+
+    service.login(credentials).subscribe(res => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne('http://localhost:8080/api/auth/login');
+    expect(req.request.method).toBe('POST');
+    req.flush(mockResponse);
+  });
+
+  it('should return false if not logged in', () => {
+    expect(service.isloggedIn()).toBeFalsy();
+  });
+
+  it('should return true if token exists', () => {
+    localStorage.setItem('token', 'fake.payload.signature');
+    expect(service.isloggedIn()).toBeTruthy();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\claim\claim.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { ClaimService } from './claim.service';
+
+describe('ClaimService', () => {
+  let service: ClaimService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        ClaimService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(ClaimService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\company\company.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { CompanyService } from './company.service';
+
+describe('CompanyService', () => {
+  let service: CompanyService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        CompanyService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(CompanyService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should fetch dashboard data', () => {
+    service.getDashboard().subscribe();
+    const req = httpMock.expectOne('http://localhost:8080/api/company/dashboard');
+    expect(req.request.method).toBe('GET');
+    req.flush({});
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\policy\policy.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { PolicyService } from './policy.service';
+
+describe('PolicyService', () => {
+  let service: PolicyService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        PolicyService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(PolicyService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should fetch policy types', () => {
+    service.getPolicyTypes().subscribe();
+    const req = httpMock.expectOne('http://localhost:8080/api/policy-types');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('should issue policy', () => {
+    const data = { typeId: 1 };
+    service.issuePolicy(data).subscribe();
+    const req = httpMock.expectOne('http://localhost:8080/api/policies/issue');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(data);
+    req.flush({});
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\policy-type\policy-type.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { PolicyTypeService } from './policy-type.service';
+
+describe('PolicyTypeService', () => {
+  let service: PolicyTypeService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        PolicyTypeService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(PolicyTypeService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should fetch policy types', () => {
+    service.getPolicyTypes().subscribe();
+    const req = httpMock.expectOne('http://localhost:8080/api/admin/policy-types');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  it('should create policy type', () => {
+    const data = { name: 'New Type' };
+    service.createPolicyType(data).subscribe();
+    const req = httpMock.expectOne('http://localhost:8080/api/admin/policy-types');
+    expect(req.request.method).toBe('POST');
+    req.flush({});
+  });
+});
+
+
+
+FILE: D:\Projects\InsureAI\InsureAI-Frontend\src\app\services\risk\risk.service.spec.ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { RiskService } from './risk.service';
+
+describe('RiskService', () => {
+  let service: RiskService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        RiskService,
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+    service = TestBed.inject(RiskService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should create risk assessment', () => {
+    const data = { score: 80 };
+    service.createRisk(data).subscribe();
+    const req = httpMock.expectOne('http://localhost:8080/api/risk');
+    expect(req.request.method).toBe('POST');
+    req.flush({});
+  });
+});
+

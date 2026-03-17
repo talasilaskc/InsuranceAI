@@ -1,0 +1,164 @@
+<div id="topbar-container" data-title="Admin Dashboard"></div>
+
+<main class="p-8 space-y-8">
+
+@if(loading()){
+  <div class="flex flex-col justify-center items-center py-20 space-y-4">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-line border-t-primary"></div>
+    <p class="text-xs font-bold text-muted uppercase tracking-widest animate-pulse">Loading analytics...</p>
+  </div>
+}
+
+@if(!loading() && dashboard){
+
+<!-- ⭐ KPI CARDS -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+
+  <a routerLink="/admin/companies" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-primary shadow-sm hover:shadow-md cursor-pointer group">
+    <div class="bg-primary/5 p-3 text-primary group-hover:scale-110 transition-transform">
+      <i data-lucide="building" size="28"></i>
+    </div>
+    <div>
+      <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Companies</p>
+      <p class="text-3xl font-bold text-ink tracking-tight">{{dashboard.totalCompanies || 0}}</p>
+    </div>
+  </a>
+
+  <a routerLink="/admin/all-policies" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-emerald-500 shadow-sm hover:shadow-md cursor-pointer group">
+    <div class="bg-emerald-50 p-3 text-emerald-600 group-hover:scale-110 transition-transform">
+      <i data-lucide="shield-check" size="28"></i>
+    </div>
+    <div>
+      <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Active Policies</p>
+      <p class="text-3xl font-bold text-ink tracking-tight">{{dashboard.activePolicies || 0}}</p>
+    </div>
+  </a>
+
+  <a routerLink="/admin/pending-policies" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-amber-500 shadow-sm hover:shadow-md cursor-pointer group">
+    <div class="bg-amber-50 p-3 text-amber-600 group-hover:scale-110 transition-transform">
+      <i data-lucide="clipboard-list" size="28"></i>
+    </div>
+    <div>
+      <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Pending Policies</p>
+      <p class="text-3xl font-bold text-ink tracking-tight">{{dashboard.pendingPolicies || 0}}</p>
+    </div>
+  </a>
+
+  <a routerLink="/admin/all-claims" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-rose-500 shadow-sm hover:shadow-md cursor-pointer group">
+    <div class="bg-rose-50 p-3 text-rose-600 group-hover:scale-110 transition-transform">
+      <i data-lucide="alert-circle" size="28"></i>
+    </div>
+    <div>
+      <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Pending Claims</p>
+      <p class="text-3xl font-bold text-ink tracking-tight">{{dashboard.pendingClaims || 0}}</p>
+    </div>
+  </a>
+
+  <a routerLink="/admin/all-claims" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-indigo-500 shadow-sm hover:shadow-md cursor-pointer group">
+    <div class="bg-indigo-50 p-3 text-indigo-600 group-hover:scale-110 transition-transform">
+      <i data-lucide="dollar-sign" size="28"></i>
+    </div>
+    <div>
+      <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Total Payout</p>
+      <p class="text-3xl font-bold text-ink tracking-tight">${{(dashboard.totalPayout || 0) | number}}</p>
+    </div>
+  </a>
+
+</div>
+
+<!-- ⭐ MINI ANALYTICS -->
+<div class="grid lg:grid-cols-2 gap-8">
+
+  <!-- Revenue by Product -->
+  <div class="card p-0 overflow-hidden shadow-sm">
+    <div class="p-6 border-b border-line bg-surface/50">
+      <h2 class="text-sm font-bold text-ink uppercase tracking-widest flex items-center gap-2">
+        <i data-lucide="pie-chart" size="18" class="text-primary"></i>
+        Revenue by Product
+      </h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="bg-background text-left text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+            <th class="px-6 py-4">Policy Type</th>
+            <th class="px-6 py-4">Policies</th>
+            <th class="px-6 py-4 text-right">Revenue</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          @for(r of dashboard.revenueByProduct || []; track r.policyTypeName){
+          <tr class="hover:bg-slate-50/50 transition-colors group">
+            <td class="px-6 py-4 font-bold text-ink group-hover:text-primary transition-colors">
+              {{r.policyTypeName}}
+            </td>
+            <td class="px-6 py-4 text-xs font-medium text-muted">
+              {{r.policiesSold}}
+            </td>
+            <td class="px-6 py-4 text-sm text-right font-bold text-emerald-600">
+              ${{r.totalRevenue | number}}
+            </td>
+          </tr>
+          }
+          @if(!dashboard.revenueByProduct || dashboard.revenueByProduct.length === 0) {
+            <tr>
+              <td colspan="3" class="px-6 py-8 text-center text-muted text-sm italic">No revenue data available.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Claim Trend -->
+  <div class="card p-0 overflow-hidden shadow-sm">
+    <div class="p-6 border-b border-line bg-surface/50">
+      <h2 class="text-sm font-bold text-ink uppercase tracking-widest flex items-center gap-2">
+        <i data-lucide="bar-chart-2" size="18" class="text-primary"></i>
+        Claims Trend
+      </h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="bg-background text-left text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+            <th class="px-6 py-4">Status</th>
+            <th class="px-6 py-4 text-right">Count</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          @for(c of dashboard.claimTrend || []; track c.status){
+          <tr class="hover:bg-slate-50/50 transition-colors group">
+            <td class="px-6 py-4">
+              <span class="text-[9px] px-3 py-1 font-bold uppercase tracking-widest border bg-surface"
+                    [ngClass]="{
+                    'border-amber-500 text-amber-600': c.status === 'SUBMITTED' || c.status === 'PENDING',
+                    'border-emerald-500 text-emerald-600': c.status === 'APPROVED',
+                    'border-rose-500 text-rose-600': c.status === 'REJECTED',
+                    'border-slate-500 text-slate-600': c.status !== 'SUBMITTED' && c.status !== 'APPROVED' && c.status !== 'REJECTED' && c.status !== 'PENDING'
+                    }">
+                {{c.status}}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-right font-bold text-ink text-lg">
+              {{c.count}}
+            </td>
+          </tr>
+          }
+          @if(!dashboard.claimTrend || dashboard.claimTrend.length === 0) {
+            <tr>
+              <td colspan="2" class="px-6 py-8 text-center text-muted text-sm italic">No claim trends available.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+}
+
+</main>

@@ -1,0 +1,36 @@
+<div class="w-full py-2">
+    <div class="space-y-6 relative">
+        <!-- Connecting Line (Vertical) -->
+        <div class="absolute left-4 top-0 bottom-0 w-px bg-white/10 z-0"></div>
+        
+        <!-- Steps -->
+        <div *ngFor="let step of statuses; let i = index" class="relative z-10 flex items-center gap-6 group">
+            <!-- Marker -->
+            <div [class]="'w-8 h-8 flex items-center justify-center border transition-all duration-500 ' + 
+                (isCompleted(step.key) ? 'bg-primary border-primary text-white' : 
+                 isCurrent(step.key) ? 'bg-white border-primary text-primary shadow-[0_0_15px_rgba(102,0,51,0.4)]' : 
+                 'bg-ink border-white/20 text-muted')">
+                <i [class]="step.icon + ' text-xs'" *ngIf="!isCompleted(step.key) || isCurrent(step.key)"></i>
+                <i class="ri-check-line text-xs" *ngIf="isCompleted(step.key) && !isCurrent(step.key)"></i>
+            </div>
+            
+            <div class="flex-1">
+                <p [class]="'text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ' + 
+                    (isCompleted(step.key) || isCurrent(step.key) ? 'text-white' : 'text-muted')">
+                    {{ step.label }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Alert -->
+    <div *ngIf="currentStatus === 'REJECTED'" class="mt-10 p-4 border border-rose-600/50 bg-rose-600/5 flex items-center gap-4">
+        <div class="w-8 h-8 bg-rose-600 flex items-center justify-center text-white shrink-0">
+            <i class="ri-close-circle-line"></i>
+        </div>
+        <div>
+            <h4 class="text-rose-600 font-bold uppercase tracking-widest text-[10px]">Claim Rejected</h4>
+            <p class="text-muted text-[10px] uppercase tracking-wider opacity-60">Denied by administration.</p>
+        </div>
+    </div>
+</div>

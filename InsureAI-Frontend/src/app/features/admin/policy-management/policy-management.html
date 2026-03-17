@@ -1,0 +1,101 @@
+<div id="topbar-container" data-title="Insurance Products"></div>
+
+<main class="p-8 space-y-8">
+
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-lg font-bold text-ink tracking-tight">Policy Management</h2>
+            <p class="text-[11px] text-muted mt-1">
+                {{ policyTypes().length }} total products configuring AI liability
+                @if(activeCount() > 0) {
+                — <span class="text-emerald-600 font-bold">{{ activeCount() }} active in market</span>
+                }
+            </p>
+        </div>
+
+        <a routerLink="/admin/policy-types/create" class="btn-primary py-2.5 px-6 gap-2 text-[10px] shadow-sm">
+            <i data-lucide="plus" size="14"></i>
+            Create New Product
+        </a>
+    </div>
+
+    @if (loading()) {
+    <div class="card p-20 flex flex-col items-center justify-center gap-4">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        <p class="text-xs font-bold text-muted uppercase tracking-widest">Compiling Product Data...</p>
+    </div>
+    } @else if (policyTypes().length === 0) {
+    <div class="card p-20 text-center bg-slate-50/10">
+        <div class="flex flex-col items-center gap-2 opacity-50">
+            <i data-lucide="box" class="text-slate-400 mb-2" size="42"></i>
+            <p class="text-sm font-bold text-slate-600 uppercase tracking-widest">No Products Configured</p>
+            <p class="text-[10px] text-muted">Start by creating an insurance product to offer to companies.</p>
+        </div>
+    </div>
+    } @else {
+    <!-- Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+        @for (type of policyTypes(); track type.id) {
+        <div class="card flex flex-col group hover:border-primary/30 transition-all relative overflow-hidden">
+
+            <!-- Status Bar Indicator -->
+            <div class="absolute top-0 left-0 w-full h-1" [class.bg-emerald-500]="type.active"
+                [class.bg-rose-500]="!type.active">
+            </div>
+
+            <div class="flex justify-between items-start mb-6">
+                <div
+                    class="w-12 h-12 rounded-xl bg-slate-50 border border-line text-primary flex items-center justify-center shrink-0 group-hover:bg-primary/5 group-hover:border-primary/20 transition-all">
+                    <i data-lucide="shield-check" size="24" *ngIf="type.active"></i>
+                    <i data-lucide="shield-off" size="24" *ngIf="!type.active" class="text-muted"></i>
+                </div>
+
+                <!-- Status Badge -->
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-sm"
+                    [class.bg-emerald-100]="type.active" [class.text-emerald-700]="type.active"
+                    [class.bg-rose-100]="!type.active" [class.text-rose-700]="!type.active">
+                    <span class="w-1.5 h-1.5 rounded-full" [class.bg-emerald-500]="type.active"
+                        [class.bg-rose-500]="!type.active"></span>
+                    {{ type.active ? 'Active' : 'Inactive' }}
+                </span>
+            </div>
+
+            <div class="flex-1 mb-8">
+                <h3 class="text-xl font-black text-ink tracking-tight uppercase mb-2">{{ type.name?.replaceAll('_', ' ')
+                    }}</h3>
+                <p class="text-xs text-muted leading-relaxed line-clamp-3">{{ type.description }}</p>
+            </div>
+
+            <div class="bg-slate-50/50 -mx-6 px-6 py-4 border-y border-line/40 flex justify-between items-center mb-6">
+                <div>
+                    <p class="text-[9px] font-bold text-muted uppercase tracking-widest mb-1">Base Premium</p>
+                    <p class="text-base font-black text-ink">₹{{ (type.basePrice || 0).toLocaleString() }}</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-3">
+                <a [routerLink]="['/admin/policy-types/edit', type.id]"
+                    class="flex-1 btn-secondary py-2.5 text-[10px] bg-white border-line hover:border-primary hover:bg-primary/5 text-ink hover:text-primary transition-all">
+                    <i data-lucide="settings-2" size="14"></i>
+                    Configure
+                </a>
+
+                @if (type.active) {
+                <button (click)="deactivate(type.id)" title="Deactivate Product"
+                    class="p-2.5 border border-line bg-white hover:border-rose-200 hover:bg-rose-50 text-muted hover:text-rose-600 transition-all rounded-none">
+                    <i data-lucide="power-off" size="16"></i>
+                </button>
+                }
+            </div>
+
+        </div>
+        }
+
+    </div>
+    }
+
+</main>

@@ -1,0 +1,248 @@
+<div id="topbar-container" data-title="Risk Assessment"></div>
+
+<main class="p-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+
+        <!-- Info Banner -->
+
+        <div class="flex items-center gap-4 p-6 bg-blue-50 border border-blue-100 rounded-2xl">
+            <div class="w-12 h-12 bg-primary text-white rounded-xl flex items-center justify-center shrink-0">
+                <i data-lucide="shield-alert"></i>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">
+                    Structured AI Risk Assessment
+                </h2>
+
+                <p class="text-sm text-slate-600">
+                    Provide accurate details about governance and operational context.
+                </p>
+            </div>
+        </div>
+
+
+        <form class="space-y-8" [formGroup]="riskForm" (ngSubmit)="submit()">
+
+            <!-- Select AI System -->
+
+            <div class="card">
+                <h3 class="text-md font-bold text-slate-800 mb-6">
+                    Select AI System
+                </h3>
+
+                <select class="input-field" formControlName="aiSystemId"
+                    [ngClass]="{'border-rose-500': f.aiSystemId.invalid && f.aiSystemId.touched}">
+
+                    <option value="">Select AI System *</option>
+
+                    @for(system of systems(); track system.id){
+                    <option [value]="system.id">
+                        {{system.name}}
+                    </option>
+                    }
+
+                </select>
+                @if(f.aiSystemId.invalid && f.aiSystemId.touched){
+                    <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">AI System is required</p>
+                }
+            </div>
+
+
+            <!-- Governance -->
+
+            <div class="card">
+                <h3 class="text-md font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <i data-lucide="check-circle-2" class="text-emerald-500"></i>
+                    Governance & Oversight
+                </h3>
+
+                <div class="grid md:grid-cols-2 gap-6">
+
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" formControlName="humanOversight">
+                        Human Oversight Present <span class="text-rose-500">*</span>
+                    </label>
+
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" formControlName="biasTesting">
+                        Bias Testing Implemented <span class="text-rose-500">*</span>
+                    </label>
+
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" formControlName="auditLogsMaintained">
+                        Audit Logs Maintained <span class="text-rose-500">*</span>
+                    </label>
+
+                </div>
+            </div>
+
+
+            <!-- Data Exposure -->
+
+            <div class="card">
+                <h3 class="text-md font-bold text-slate-800 mb-6">
+                    Data Exposure
+                </h3>
+
+                <select class="input-field" formControlName="dataExposureCategory"
+                    [ngClass]="{'border-rose-500': f.dataExposureCategory.invalid && f.dataExposureCategory.touched}">
+                    <option value="">Select Category *</option>
+                    <option value="PERSONAL">Personal Data (PII)</option>
+                    <option value="FINANCIAL">Financial Data</option>
+                    <option value="HEALTH">Health Data</option>
+                    <option value="GENERIC">Generic Data</option>
+                </select>
+                @if(f.dataExposureCategory.invalid && f.dataExposureCategory.touched){
+                    <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Data Category is required</p>
+                }
+
+            </div>
+
+
+            <!-- Operational Risk -->
+
+            <div class="card">
+                <h3 class="text-md font-bold text-slate-800 mb-6">
+                    Operational Risk
+                </h3>
+
+                <div class="grid md:grid-cols-2 gap-6">
+
+                    <div class="col-span-1 flex flex-col justify-center">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" formControlName="lifeCriticalUsage">
+                            Life Critical Usage <span class="text-rose-500">*</span>
+                        </label>
+                    </div>
+
+                    <div class="col-span-1">
+                        <select class="input-field" formControlName="financialImpactLevel"
+                            [ngClass]="{'border-rose-500': f.financialImpactLevel.invalid && f.financialImpactLevel.touched}">
+                            <option value="">Select Impact Level *</option>
+                            <option value="LOW">Low Financial Impact</option>
+                            <option value="MEDIUM">Medium Financial Impact</option>
+                            <option value="HIGH">High Financial Impact</option>
+                        </select>
+                        @if(f.financialImpactLevel.invalid && f.financialImpactLevel.touched){
+                            <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Financial Impact is required</p>
+                        }
+                    </div>
+
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="text-sm font-medium text-slate-700">Past Incident Count (Last 12 Months) <span class="text-rose-500">*</span></label>
+                        <input type="number" class="input-field" placeholder="Number of incidents"
+                            formControlName="pastIncidentCount">
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="flex justify-end gap-4">
+
+                <button type="button" class="btn-secondary px-8" (click)="cancel()">
+                    Cancel
+                </button>
+
+                <button type="submit" class="btn-primary px-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                    [disabled]="riskForm.invalid">
+                    Submit Assessment
+                </button>
+
+            </div>
+
+        </form>
+
+
+
+        <!-- Risk Result -->
+
+        @if (riskResult()) {
+
+        <div class="card">
+
+            <h2 class="text-lg font-bold mb-6">
+                Risk Assessment Result
+            </h2>
+
+            <div class="grid grid-cols-2 gap-6">
+
+                <div>
+                    <p class="text-sm text-slate-500">Total Risk Score</p>
+                    <p class="text-4xl font-bold text-primary">
+                        {{riskResult().totalRiskScore}}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-sm text-slate-500">Risk Level</p>
+
+                    <span class="px-3 py-1 rounded-full text-xs font-bold"
+                        [class.bg-green-100]="riskResult().riskLevel === 'LOW'"
+                        [class.text-green-700]="riskResult().riskLevel === 'LOW'"
+                        [class.bg-yellow-100]="riskResult().riskLevel === 'MEDIUM'"
+                        [class.text-yellow-700]="riskResult().riskLevel === 'MEDIUM'"
+                        [class.bg-red-100]="riskResult().riskLevel === 'HIGH'"
+                        [class.text-red-700]="riskResult().riskLevel === 'HIGH'">
+
+                        {{riskResult().riskLevel}}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- Risk Meter -->
+
+            <div class="mt-8">
+
+                <p class="text-sm text-slate-500 mb-2">
+                    Risk Score Meter
+                </p>
+
+                <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+
+                    <div class="h-3 transition-all duration-500" [style.width.%]="riskResult().totalRiskScore"
+                        [class.bg-green-500]="riskResult().riskLevel === 'LOW'"
+                        [class.bg-yellow-500]="riskResult().riskLevel === 'MEDIUM'"
+                        [class.bg-red-500]="riskResult().riskLevel === 'HIGH'">
+
+                    </div>
+
+                </div>
+
+                <p class="text-xs text-slate-500 mt-2">
+                    {{riskResult().totalRiskScore}} / 100
+                </p>
+
+            </div>
+
+
+            <!-- Recommendation -->
+
+            <p class="mt-6 text-sm text-slate-600">
+
+                @if(riskResult().riskLevel === 'LOW'){
+                This AI system qualifies for standard insurance coverage.
+                }
+
+                @if(riskResult().riskLevel === 'MEDIUM'){
+                Moderate risk detected. Additional governance controls recommended.
+                }
+
+                @if(riskResult().riskLevel === 'HIGH'){
+                High risk system detected. Enhanced insurance coverage required.
+                }
+
+            </p>
+
+        </div>
+
+        }
+
+    </div>
+
+</main>

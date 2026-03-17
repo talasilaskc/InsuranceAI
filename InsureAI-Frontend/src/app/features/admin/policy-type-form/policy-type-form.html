@@ -1,0 +1,174 @@
+<div id="topbar-container" [attr.data-title]="isEditMode() ? 'Edit Product Configuration' : 'Create New Product'"></div>
+
+<main class="p-8 pb-32 max-w-5xl mx-auto space-y-8">
+    <div class="flex items-center gap-4">
+        <a routerLink="/admin/all-policies"
+            class="w-8 h-8 rounded-full border border-line flex items-center justify-center text-muted hover:bg-slate-50 transition-colors">
+            <i data-lucide="arrow-left" size="14"></i>
+        </a>
+        <h2 class="text-xl font-bold text-ink">{{ isEditMode() ? 'Edit Product Configuration' : 'Create New Product' }}
+        </h2>
+    </div>
+
+    @if(loading()) {
+    <div class="card p-20 flex flex-col items-center justify-center gap-4">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        <p class="text-xs font-bold text-muted uppercase tracking-widest">Loading Configuration...</p>
+    </div>
+    } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-8">
+
+        <!-- Core Configuration -->
+        <div class="card p-0 overflow-hidden shadow-sm">
+            <div
+                class="p-6 border-b border-line bg-slate-50/50 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <h3 class="text-sm font-bold text-ink uppercase tracking-widest">Base Identity</h3>
+                    <p class="text-[10px] text-muted mt-1">Configure the core identity and descriptor of this insurance
+                        product.</p>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Name -->
+                <div>
+                    <label class="block text-xs font-bold text-ink uppercase tracking-widest mb-2 flex justify-between">
+                        Product Name <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="text" formControlName="name" placeholder="e.g. AI_ENTERPRISE_LIABILITY"
+                        class="w-full px-4 py-3 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors"
+                        [ngClass]="{'border-rose-500': f.name.invalid && f.name.touched}">
+                    @if(f.name.invalid && f.name.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Name is required</p>
+                    }
+                    <p class="text-[10px] text-muted mt-2 font-bold uppercase tracking-widest leading-relaxed">
+                        Tip: Use systematic naming conventions (e.g., standardizing with underscores).
+                    </p>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-xs font-bold text-ink uppercase tracking-widest mb-2 flex justify-between">
+                        Product Description <span class="text-rose-500">*</span>
+                    </label>
+                    <textarea formControlName="description" rows="4"
+                        placeholder="Describe the scope and purpose of this insurance product..."
+                        class="w-full px-4 py-3 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors resize-y"
+                        [ngClass]="{'border-rose-500': f.description.invalid && f.description.touched}"></textarea>
+                    @if(f.description.invalid && f.description.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Description required (Max 500 chars)</p>
+                    }
+                </div>
+
+                <!-- Active Status Toggle -->
+                <div class="flex items-center justify-between p-4 bg-slate-50 border border-line rounded-md">
+                    <div>
+                        <p class="text-[11px] font-bold text-ink uppercase tracking-widest">Market Status</p>
+                        <p class="text-[10px] text-muted mt-1">Is this product actively available for underwriting?</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" formControlName="active" class="sr-only peer">
+                        <div
+                            class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500">
+                        </div>
+                        <span class="ml-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{{
+                            form.get('active')?.value ? 'Active' : 'Archived' }}</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Bounds Configuration -->
+        <div class="card p-0 overflow-hidden shadow-sm">
+            <div
+                class="p-6 border-b border-line bg-slate-50/50 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <h3 class="text-sm font-bold text-ink uppercase tracking-widest">Financial Boundaries</h3>
+                    <p class="text-[10px] text-muted mt-1">Set the core financial limits and premium baselines.</p>
+                </div>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- Base Price -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Base
+                        Premium (₹) <span class="text-rose-500">*</span></label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-bold">₹</span>
+                        <input type="number" formControlName="basePrice" min="0" placeholder="0"
+                            class="w-full pl-8 pr-4 py-2 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors"
+                            [ngClass]="{'border-rose-500': f.basePrice.invalid && f.basePrice.touched}">
+                    </div>
+                    @if(f.basePrice.invalid && f.basePrice.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Valid Base Price required</p>
+                    }
+                    <p class="text-[9px] text-muted mt-2 font-bold uppercase tracking-widest">Standard Minimum Cost</p>
+                </div>
+
+                <!-- Min Coverage -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Minimum
+                        Capability Limit (₹) <span class="text-rose-500">*</span></label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-bold">₹</span>
+                        <input type="number" formControlName="minCoverage" min="0" placeholder="0"
+                            class="w-full pl-8 pr-4 py-2 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors"
+                            [ngClass]="{'border-rose-500': f.minCoverage.invalid && f.minCoverage.touched}">
+                    </div>
+                    @if(f.minCoverage.invalid && f.minCoverage.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Valid Minimum Coverage required</p>
+                    }
+                    <p class="text-[9px] text-muted mt-2 font-bold uppercase tracking-widest">Floor Coverage</p>
+                </div>
+
+                <!-- Max Coverage -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Maximum
+                        Capability Limit (₹) <span class="text-rose-500">*</span></label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-bold">₹</span>
+                        <input type="number" formControlName="maxCoverage" min="0" placeholder="0"
+                            class="w-full pl-8 pr-4 py-2 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors"
+                            [ngClass]="{'border-rose-500': f.maxCoverage.invalid && f.maxCoverage.touched}">
+                    </div>
+                    @if(f.maxCoverage.invalid && f.maxCoverage.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Valid Maximum Coverage required</p>
+                    }
+                    <p class="text-[9px] text-muted mt-2 font-bold uppercase tracking-widest">Ceiling Coverage</p>
+                </div>
+
+            </div>
+
+            <div class="p-6 bg-amber-50/50 border-t border-amber-200">
+                <p
+                    class="text-[10px] text-amber-800 font-bold uppercase tracking-widest leading-relaxed flex items-center gap-2">
+                    <i data-lucide="triangle-alert" size="14"></i>
+                    Warning: Changing financial bounds may immediately impact new quotes. Existing policies are
+                    grandfathered in.
+                </p>
+            </div>
+
+        </div>
+
+        <div class="flex items-center justify-end gap-4 pt-4">
+            <a routerLink="/admin/all-policies"
+                class="px-8 py-3 bg-white border border-line text-xs font-bold text-ink uppercase tracking-widest hover:bg-slate-50 transition-colors">
+                Cancel
+            </a>
+
+            <button type="submit" [disabled]="submitting() || form.invalid"
+                class="btn-primary px-8 py-3 text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                @if(submitting()) {
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Saving Configuration...
+                } @else {
+                <i data-lucide="save" size="14"></i>
+                Save Product Configuration
+                }
+            </button>
+        </div>
+
+    </form>
+    }
+</main>

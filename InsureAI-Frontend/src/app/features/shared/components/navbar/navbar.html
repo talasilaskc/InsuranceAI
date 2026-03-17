@@ -1,0 +1,59 @@
+<header class="topbar">
+
+  <div class="flex items-center gap-4">
+
+    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
+      Portal /
+    </span>
+
+    <h1 class="text-sm font-bold text-ink uppercase tracking-widest">
+      {{title()}}
+    </h1>
+
+  </div>
+
+
+  <div class="flex items-center gap-6">
+
+
+    <!-- Notifications -->
+    <button class="p-2 text-muted hover:text-primary transition-colors">
+
+      <i data-lucide="bell" size="18"></i>
+
+    </button>
+
+
+    <!-- User Profile -->
+    <div class="flex items-center gap-3 pl-4 border-l border-line">
+
+      <div class="text-right hidden sm:block">
+
+        <p class="text-[10px] font-bold text-ink lowercase tracking-widest">
+          {{email()}}
+        </p>
+
+        <p class="text-[9px] text-muted uppercase tracking-widest">
+          {{role()}}
+        </p>
+
+      </div>
+
+      <div class="w-8 h-8 bg-primary flex items-center justify-center text-white text-[10px] font-bold uppercase">
+
+        {{email().charAt(0)}}
+
+      </div>
+
+    </div>
+
+    <!-- Sign Out -->
+    <button (click)="logout()" class="p-2 text-muted hover:text-rose-500 transition-colors ml-2" title="Sign Out">
+
+      <i data-lucide="log-out" size="18"></i>
+
+    </button>
+
+  </div>
+
+</header>

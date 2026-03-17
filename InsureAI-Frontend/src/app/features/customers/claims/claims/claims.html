@@ -1,0 +1,89 @@
+<div id="topbar-container" data-title="Claims Management"></div>
+
+<main class="p-8 space-y-8">
+    <div class="card">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h2 class="text-sm font-bold text-ink uppercase tracking-widest">Claims Registry</h2>
+                <p class="text-[10px] text-muted uppercase tracking-widest mt-1">342 total claims filed in 2026</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="relative">
+                    <i data-lucide="filter" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size="12"></i>
+                    <select
+                        class="pl-8 pr-4 py-2 bg-background border border-line rounded-none text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-primary">
+                        <option>All Statuses</option>
+                        <option>Pending</option>
+                        <option>In Review</option>
+                        <option>Approved</option>
+                        <option>Rejected</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <table class="w-full">
+            <thead>
+                <tr class="text-left text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+                    <th class="pb-4">Claim ID</th>
+                    <th class="pb-4">Company</th>
+                    <th class="pb-4">Incident Type</th>
+                    <th class="pb-4">Amount</th>
+                    <th class="pb-4">Status</th>
+                    <th class="pb-4 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+                <tr>
+                    <td class="py-6 text-xs font-bold text-ink tracking-tight">CLM-2026-001</td>
+                    <td class="py-6">
+                        <p class="text-sm font-bold text-ink">Global Finance</p>
+                        <p class="text-[10px] text-muted">POL-8821-01</p>
+                    </td>
+                    <td class="py-6 text-xs text-ink">Algorithmic Bias</td>
+                    <td class="py-6 text-xs font-bold text-ink">$25,000</td>
+                    <td class="py-6">
+                        <span
+                            class="text-[9px] px-2 py-1 font-bold uppercase tracking-widest border border-amber-500 text-amber-600">Pending</span>
+                    </td>
+                    <td class="py-6 text-right">
+                        <a routerLink="/admin/claim-review" class="btn-primary py-2 px-6 text-[9px]">Investigate</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-6 text-xs font-bold text-ink tracking-tight">CLM-2026-002</td>
+                    <td class="py-6">
+                        <p class="text-sm font-bold text-ink">Neural Dynamics</p>
+                        <p class="text-[10px] text-muted">POL-5521-03</p>
+                    </td>
+                    <td class="py-6 text-xs text-ink">Sensor Failure</td>
+                    <td class="py-6 text-xs font-bold text-ink">$142,000</td>
+                    <td class="py-6">
+                        <span
+                            class="text-[9px] px-2 py-1 font-bold uppercase tracking-widest border border-primary text-primary">In
+                            Review</span>
+                    </td>
+                    <td class="py-6 text-right">
+                        <a routerLink="/admin/claim-review" class="btn-primary py-2 px-6 text-[9px]">Investigate</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-6 text-xs font-bold text-ink tracking-tight">CLM-2025-998</td>
+                    <td class="py-6">
+                        <p class="text-sm font-bold text-ink">Acme AI Corp</p>
+                        <p class="text-[10px] text-muted">POL-2210-01</p>
+                    </td>
+                    <td class="py-6 text-xs text-ink">Data Leakage</td>
+                    <td class="py-6 text-xs font-bold text-ink">$8,500</td>
+                    <td class="py-6">
+                        <span
+                            class="text-[9px] px-2 py-1 font-bold uppercase tracking-widest border border-emerald-500 text-emerald-600">Approved</span>
+                    </td>
+                    <td class="py-6 text-right">
+                        <a routerLink="/admin/claim-review" class="btn-secondary py-2 px-6 text-[9px]">View Report</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>

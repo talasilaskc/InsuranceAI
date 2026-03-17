@@ -1,0 +1,152 @@
+<div id="topbar-container" data-title="Insurance Products"></div>
+
+<main class="p-8">
+    <div class="max-w-6xl mx-auto space-y-12">
+
+        <!-- Header -->
+
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+
+            <div class="max-w-2xl">
+                <h2 class="text-4xl font-bold text-ink tracking-tight mb-4">
+                    Tailored Coverage for
+                    <span class="text-primary italic">AI Innovation</span>
+                </h2>
+
+                <p class="text-muted leading-relaxed">
+                    Select from our specialized insurance products designed to
+                    mitigate the unique risks of artificial intelligence deployments,
+                    from algorithmic bias to model failure.
+                </p>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="text-right">
+
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">
+                        Your Risk Score
+                    </p>
+
+                    @if(riskScore()){
+                    <p class="text-xl font-bold text-primary tracking-tight">
+                        {{riskScore().riskLevel}} Risk ({{riskScore().totalRiskScore}}/100)
+                    </p>
+                    }
+
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- Policy Grid -->
+
+        @if(loading()){
+
+        <div class="flex items-center justify-center py-20">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+
+        }
+
+        @if(!loading() && policies().length > 0){
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            @for(policy of policies(); track policy.id){
+
+            <div class="card hover:border-primary/40 transition-all">
+
+                <h3 class="text-xl font-bold text-ink mb-2">
+                    {{policy.name}}
+                </h3>
+
+                <p class="text-sm text-muted mb-6">
+                    {{policy.description}}
+                </p>
+
+                <div class="space-y-2 mb-6">
+
+                    <p class="text-xs text-muted uppercase tracking-widest">
+                        Minimum Coverage Limit
+                    </p>
+
+                    <p class="text-lg font-bold text-primary">
+                        ₹{{policy.minCoverage.toLocaleString()}}
+                    </p>
+
+                    <p class="text-xs text-muted uppercase tracking-widest">
+                        Maximum Coverage Limit
+                    </p>
+
+                    <p class="text-lg font-bold text-primary">
+                        ₹{{policy.maxCoverage.toLocaleString()}}
+                    </p>
+
+                    <p class="text-xs text-muted uppercase tracking-widest mt-4">
+                        Base Price
+                    </p>
+
+                    <p class="text-lg font-bold text-ink">
+                        ₹{{policy.basePrice.toLocaleString()}} / year
+                    </p>
+
+
+                </div>
+
+                <button class="btn-primary w-full" (click)="applyPolicy(policy.id)">
+
+                    Apply Policy
+
+                </button>
+
+            </div>
+
+            }
+
+        </div>
+
+        }
+
+
+        <!-- Why InsureAI -->
+
+        <div class="grid md:grid-cols-3 gap-12 pt-12 border-t border-line">
+
+            <div>
+                <h4 class="text-xs font-bold text-ink uppercase tracking-widest mb-4">
+                    Expert Underwriting
+                </h4>
+
+                <p class="text-xs text-muted leading-relaxed">
+                    Our team consists of AI researchers and insurance veterans
+                    who understand the nuances of model risk.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-bold text-ink uppercase tracking-widest mb-4">
+                    Dynamic Adjustments
+                </h4>
+
+                <p class="text-xs text-muted leading-relaxed">
+                    Premiums scale with your deployment, ensuring you only pay
+                    for the coverage you actually need.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-bold text-ink uppercase tracking-widest mb-4">
+                    Fast Claim Resolution
+                </h4>
+
+                <p class="text-xs text-muted leading-relaxed">
+                    Specialized claims process for technical failures, bias
+                    incidents, and performance degradation.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+</main>

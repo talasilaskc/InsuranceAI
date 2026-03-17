@@ -1,0 +1,176 @@
+<div id="topbar-container" data-title="Policy Portfolio"></div>
+
+<main class="p-8 space-y-8">
+
+@if(loading()){
+  <div class="flex flex-col justify-center items-center py-20 space-y-4">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-line border-t-primary"></div>
+    <p class="text-xs font-bold text-muted uppercase tracking-widest animate-pulse">
+      Loading Policies...
+    </p>
+  </div>
+} @else if(error()) {
+  <div class="card py-20 text-center">
+    <i data-lucide="alert-triangle" size="48" class="mx-auto text-amber-500 mb-4 opacity-50"></i>
+    <h2 class="text-lg font-bold text-ink uppercase tracking-widest">Unable to Load Policies</h2>
+    <p class="text-muted text-sm mt-2">There was a problem retrieving the policy portfolio. Please try again later.</p>
+  </div>
+} @else {
+
+  <!-- ⭐ KPI ROW -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+    <div class="card p-6 flex flex-col hover:-translate-y-1 transition-transform duration-300 border-l-4 border-indigo-500 shadow-sm group">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest">Total Policies</p>
+        <i data-lucide="layers" size="18" class="text-indigo-400 opacity-50 group-hover:opacity-100 transition-opacity"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-ink tracking-tight">
+        {{policies.length}}
+      </h3>
+    </div>
+
+    <div class="card p-6 flex flex-col hover:-translate-y-1 transition-transform duration-300 border-l-4 border-emerald-500 shadow-sm group">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest">Approved</p>
+        <i data-lucide="check-circle" size="18" class="text-emerald-400 opacity-50 group-hover:opacity-100 transition-opacity"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-emerald-600 tracking-tight">
+        {{policies.filter(p=>p.status==='APPROVED').length}}
+      </h3>
+    </div>
+
+    <div class="card p-6 flex flex-col hover:-translate-y-1 transition-transform duration-300 border-l-4 border-amber-500 shadow-sm group">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest">Pending Review</p>
+        <i data-lucide="clock" size="18" class="text-amber-400 opacity-50 group-hover:opacity-100 transition-opacity"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-amber-600 tracking-tight">
+        {{policies.filter(p=>p.status==='PENDING').length}}
+      </h3>
+    </div>
+
+    <div class="card p-6 flex flex-col hover:-translate-y-1 transition-transform duration-300 border-l-4 border-rose-500 shadow-sm group">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest">Rejected</p>
+        <i data-lucide="x-circle" size="18" class="text-rose-400 opacity-50 group-hover:opacity-100 transition-opacity"></i>
+      </div>
+      <h3 class="text-3xl font-bold text-rose-600 tracking-tight">
+        {{policies.filter(p=>p.status==='REJECTED').length}}
+      </h3>
+    </div>
+
+  </div>
+
+  <!-- ⭐ POLICY TABLE -->
+  <div class="card p-0 overflow-hidden shadow-sm">
+    <div class="p-6 border-b border-line bg-surface/50 flex justify-between items-center">
+      <h2 class="text-sm font-bold text-ink uppercase tracking-widest flex items-center gap-2">
+        <i data-lucide="file-text" size="18" class="text-primary"></i>
+        All AI Insurance Policies
+      </h2>
+      <div class="flex gap-2">
+        <span class="text-xs font-bold text-muted px-3 py-1 bg-line/30 rounded-full">
+          Showing {{policies.length}} entries
+        </span>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-background text-left text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+            <th class="px-6 py-4">Policy ID</th>
+            <th class="px-6 py-4">Client</th>
+            <th class="px-6 py-4">Type</th>
+            <th class="px-6 py-4">Coverage</th>
+            <th class="px-6 py-4 text-center">Risk Tier</th>
+            <th class="px-6 py-4">Status</th>
+            <th class="px-6 py-4 text-right">Action</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-line">
+
+          @for(p of policies; track p.id){
+
+          <tr class="hover:bg-slate-50/50 transition-colors group">
+            <td class="px-6 py-4 font-bold text-ink group-hover:text-primary transition-colors">
+              POL-{{p.id}}
+            </td>
+
+            <td class="px-6 py-4">
+              <span class="text-sm font-medium text-ink">{{p.aiSystem?.company?.name || 'Unknown Company'}}</span>
+              <p class="text-[10px] text-muted">{{p.aiSystem?.name || 'No System Link'}}</p>
+            </td>
+
+            <td class="px-6 py-4">
+              <span class="text-xs text-ink bg-line/50 px-2 py-1 uppercase tracking-wider block w-max">
+                {{p.policyType?.name || 'N/A'}}
+              </span>
+            </td>
+
+            <td class="px-6 py-4 text-sm font-medium text-ink">
+              ${{p.coverageLimit | number}}
+            </td>
+
+            <td class="px-6 py-4 text-center">
+              <span class="text-[9px] px-2 py-1 font-bold uppercase tracking-widest border whitespace-nowrap"
+                    [ngClass]="{
+                    'border-emerald-500 text-emerald-600': p.riskSnapshot?.riskLevel==='LOW',
+                    'border-amber-500 text-amber-600': p.riskSnapshot?.riskLevel==='MEDIUM',
+                    'border-rose-500 text-rose-600': p.riskSnapshot?.riskLevel==='HIGH' || p.riskSnapshot?.riskLevel === 'CRITICAL',
+                    'border-slate-300 text-slate-500': !p.riskSnapshot?.riskLevel
+                    }">
+                {{p.riskSnapshot?.riskLevel || 'UNASSESSED'}}
+              </span>
+            </td>
+
+            <td class="px-6 py-4">
+              <span class="text-[9px] px-3 py-1 font-bold uppercase tracking-widest border bg-surface inline-block whitespace-nowrap"
+                    [ngClass]="{
+                    'border-emerald-500 text-emerald-600': p.status==='APPROVED' || p.status==='ACTIVE',
+                    'border-amber-500 text-amber-600': p.status==='PENDING',
+                    'border-rose-500 text-rose-600': p.status==='REJECTED' || p.status==='EXPIRED'
+                    }">
+                <div class="flex items-center gap-1.5">
+                  @if(p.status === 'PENDING'){
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  } @else if(p.status === 'APPROVED' || p.status === 'ACTIVE'){
+                    <i data-lucide="check" size="10" class="text-emerald-600"></i>
+                  } @else {
+                    <i data-lucide="x" size="10" class="text-rose-600"></i>
+                  }
+                  {{p.status}}
+                </div>
+              </span>
+            </td>
+
+            <td class="px-6 py-4 text-right">
+              <a [routerLink]="['/admin/policy-review', p.id]" class="btn-secondary text-[9px] px-4 py-2 hover:-translate-y-0.5 whitespace-nowrap">
+                Review <i data-lucide="arrow-right" size="12" class="ml-1 inline"></i>
+              </a>
+            </td>
+          </tr>
+          }
+
+          @if(!policies || policies.length === 0){
+          <tr>
+            <td colspan="7" class="px-6 py-12 text-center">
+              <div class="flex flex-col items-center justify-center text-muted">
+                <i data-lucide="inbox" size="32" class="mb-4 opacity-50"></i>
+                <p class="text-sm font-bold uppercase tracking-widest">No Policies Found</p>
+                <p class="text-xs mt-2">There are currently no policies in the portfolio.</p>
+              </div>
+            </td>
+          </tr>
+          }
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+}
+
+</main>

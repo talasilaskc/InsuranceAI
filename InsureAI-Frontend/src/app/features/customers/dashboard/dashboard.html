@@ -1,0 +1,256 @@
+<div id="topbar-container" data-title="Company Dashboard"></div>
+
+<main class="p-8 space-y-8">
+
+@if(loading()){
+  <div class="flex flex-col justify-center items-center py-20 space-y-4">
+    <div class="animate-spin rounded-full h-12 w-12 border-4 border-line border-t-primary"></div>
+    <p class="text-xs font-bold text-muted uppercase tracking-widest animate-pulse">
+      Loading Insurance Overview...
+    </p>
+  </div>
+} @else if(error()) {
+  <div class="card py-20 text-center">
+    <i data-lucide="alert-triangle" size="48" class="mx-auto text-amber-500 mb-4 opacity-50"></i>
+    <h2 class="text-lg font-bold text-ink uppercase tracking-widest">Unable to Load Dashboard</h2>
+    <p class="text-muted text-sm mt-2">There was a problem retrieving your data. Please try again later.</p>
+  </div>
+} @else if(dashboard){
+
+  <!-- ⭐ KPI CARDS -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+    <a routerLink="/company/ai-system" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-primary shadow-sm hover:shadow-md cursor-pointer group">
+      <div class="bg-primary/5 p-4 text-primary group-hover:scale-110 transition-transform">
+        <i data-lucide="cpu" size="28"></i>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">AI Systems</p>
+        <p class="text-3xl font-bold text-ink tracking-tight">
+          {{dashboard.aiSystems || 0}}
+        </p>
+      </div>
+    </a>
+
+    <a routerLink="/company/my-policies" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-emerald-500 shadow-sm hover:shadow-md cursor-pointer group">
+      <div class="bg-emerald-50 p-4 text-emerald-600 group-hover:scale-110 transition-transform">
+        <i data-lucide="shield-check" size="28"></i>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Active Policies</p>
+        <p class="text-3xl font-bold text-ink tracking-tight">
+          {{dashboard.activePolicies || 0}}
+        </p>
+      </div>
+    </a>
+
+    <a routerLink="/company/claim-history" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-amber-500 shadow-sm hover:shadow-md cursor-pointer group">
+      <div class="bg-amber-50 p-4 text-amber-600 group-hover:scale-110 transition-transform">
+        <i data-lucide="alert-circle" size="28"></i>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Claims Submitted</p>
+        <p class="text-3xl font-bold text-ink tracking-tight">
+          {{dashboard.claimsSubmitted || 0}}
+        </p>
+      </div>
+    </a>
+
+    <a routerLink="/company/my-policies" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-indigo-500 shadow-sm hover:shadow-md cursor-pointer group">
+      <div class="bg-indigo-50 p-4 text-indigo-600 group-hover:scale-110 transition-transform">
+        <i data-lucide="dollar-sign" size="28"></i>
+      </div>
+      <div>
+        <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Coverage Left</p>
+        <p class="text-3xl font-bold text-ink tracking-tight">
+          ${{dashboard.remainingCoverage | number}}
+        </p>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ⭐ ALERT PANEL -->
+  @if(dashboard.alerts && dashboard.alerts.length > 0){
+    <div class="card border-l-4 border-rose-500 bg-rose-50 py-4 px-6 relative overflow-hidden">
+      <!-- Decorator -->
+      <div class="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-rose-100 to-transparent flex items-center justify-end pr-4 opacity-50">
+        <i data-lucide="alert-triangle" size="48" class="text-rose-200"></i>
+      </div>
+
+      <p class="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-3 flex items-center gap-2 relative z-10">
+        <i data-lucide="bell-ring" size="14"></i>
+        Important Notifications
+      </p>
+
+      <ul class="space-y-3 relative z-10">
+        @for(alert of dashboard.alerts; track alert){
+          <li class="text-sm font-medium text-rose-800 flex items-start gap-3">
+            <i data-lucide="alert-circle" size="18" class="mt-0.5 min-w-[18px]"></i>
+            <span>{{alert}}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="grid lg:grid-cols-2 gap-8">
+
+    <!-- ⭐ POLICY COVERAGE SNAPSHOT -->
+    <div class="card p-0 overflow-hidden shadow-sm">
+      <div class="p-6 border-b border-line bg-surface/50">
+        <h2 class="text-sm font-bold text-ink uppercase tracking-widest flex items-center gap-2">
+          <i data-lucide="shield" size="18" class="text-primary"></i>
+          Policy Coverage Snapshot
+        </h2>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-background text-left text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+              <th class="px-6 py-4">Policy Type</th>
+              <th class="px-6 py-4">Coverage Limit</th>
+              <th class="px-6 py-4">Remaining</th>
+              <th class="px-6 py-4 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            @for(p of dashboard.policies; track p.policyTypeName){
+              <tr class="hover:bg-slate-50/50 transition-colors group">
+                <td class="px-6 py-4 font-bold text-ink group-hover:text-primary transition-colors">
+                  {{p.policyTypeName}}
+                </td>
+                <td class="px-6 py-4 text-xs font-medium text-muted">
+                  ${{p.coverage | number}}
+                </td>
+                <td class="px-6 py-4 text-xs font-medium text-ink">
+                  ${{p.remaining | number}}
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <span class="text-[9px] px-3 py-1 font-bold uppercase tracking-widest border bg-surface inline-block"
+                        [ngClass]="{
+                        'border-emerald-500 text-emerald-600': p.status === 'APPROVED' || p.status === 'ACTIVE',
+                        'border-amber-500 text-amber-600': p.status === 'PENDING',
+                        'border-rose-500 text-rose-600': p.status === 'REJECTED' || p.status === 'EXPIRED'
+                        }">
+                    {{p.status}}
+                  </span>
+                </td>
+              </tr>
+            }
+            @if(!dashboard.policies || dashboard.policies.length === 0){
+              <tr>
+                <td colspan="4" class="px-6 py-10 text-center">
+                  <div class="flex flex-col items-center justify-center text-muted">
+                    <i data-lucide="inbox" size="32" class="mb-4 opacity-50"></i>
+                    <p class="text-sm font-bold uppercase tracking-widest">No Active Policies</p>
+                    <p class="text-xs mt-2">Subscribe to a policy to see insights here.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ⭐ AI RISK SNAPSHOT -->
+    <div class="card p-0 overflow-hidden shadow-sm flex flex-col h-full">
+      <div class="p-6 border-b border-line bg-surface/50">
+        <h2 class="text-sm font-bold text-ink uppercase tracking-widest flex items-center gap-2">
+          <i data-lucide="activity" size="18" class="text-primary"></i>
+          AI Risk Analysis
+        </h2>
+      </div>
+
+      <div class="overflow-x-auto flex-1">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-background text-left text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+              <th class="px-6 py-4">System Identity</th>
+              <th class="px-6 py-4">Risk Score</th>
+              <th class="px-6 py-4 text-right">Severity</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            @for(r of dashboard.aiRiskSnapshot; track r.systemName){
+              <tr class="hover:bg-slate-50/50 transition-colors group">
+                <td class="px-6 py-4 font-bold text-ink group-hover:text-primary transition-colors">
+                  {{r.systemName}}
+                </td>
+                <td class="px-6 py-4 text-xs font-medium text-muted">
+                  <div class="flex items-center gap-2">
+                    <span class="w-8">{{r.riskScore}}</span>
+                    <div class="h-1.5 w-16 bg-line overflow-hidden rounded-full">
+                      <div class="h-full" [ngStyle]="{'width': r.riskScore + '%'}" [ngClass]="{
+                        'bg-emerald-500': r.riskScore < 30,
+                        'bg-amber-500': r.riskScore >= 30 && r.riskScore < 70,
+                        'bg-rose-500': r.riskScore >= 70
+                      }"></div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <span class="text-[9px] px-3 py-1 font-bold uppercase tracking-widest border bg-surface inline-block"
+                        [ngClass]="{
+                        'border-emerald-500 text-emerald-600': r.riskLevel === 'LOW',
+                        'border-amber-500 text-amber-600': r.riskLevel === 'MEDIUM',
+                        'border-rose-500 text-rose-600': r.riskLevel === 'HIGH' || r.riskLevel === 'CRITICAL'
+                        }">
+                    {{r.riskLevel}}
+                  </span>
+                </td>
+              </tr>
+            }
+            @if(!dashboard.aiRiskSnapshot || dashboard.aiRiskSnapshot.length === 0){
+              <tr>
+                <td colspan="3" class="px-6 py-10 text-center">
+                  <div class="flex flex-col items-center justify-center text-muted">
+                    <i data-lucide="shield-off" size="32" class="mb-4 opacity-50"></i>
+                    <p class="text-sm font-bold uppercase tracking-widest">No Risk Data</p>
+                    <p class="text-xs mt-2">Deploy models to generate risk assessments.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ⭐ CLAIM INSIGHT CARD Embedded Below Table -->
+      @if(dashboard.lastPayout !== undefined) {
+        <div class="border-t border-line bg-gradient-to-r from-primary to-primary/90 text-white p-6 relative overflow-hidden mt-auto group">
+          <!-- Background Decorator -->
+          <div class="absolute -right-6 -top-6 opacity-10 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-700">
+            <i data-lucide="trending-up" size="140"></i>
+          </div>
+
+          <div class="relative z-10">
+            <div class="flex justify-between items-start mb-4">
+              <h3 class="text-[10px] uppercase tracking-widest font-bold opacity-80 flex items-center gap-2">
+                <i data-lucide="activity" size="14"></i>
+                Claims Insight
+              </h3>
+              <a routerLink="/company/claim-history" class="text-[10px] uppercase font-bold tracking-widest bg-white/10 hover:bg-white/20 px-3 py-1 transition-colors">
+                View History
+              </a>
+            </div>
+            
+            <p class="text-xs text-white/70 mb-1">Most Recent Disbursement</p>
+            <p class="text-3xl font-bold tracking-tight mb-2">
+              ${{dashboard.lastPayout | number}}
+            </p>
+            <p class="text-white/70 text-xs font-medium">
+              Monitor claim activity carefully to maintain favorable underwriting risk conditions for your company.
+            </p>
+          </div>
+        </div>
+      }
+    </div>
+
+  </div>
+
+}
+
+</main>

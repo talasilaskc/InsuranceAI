@@ -1,0 +1,38 @@
+<div class="sidebar">
+
+  <div class="p-8 border-b border-line">
+
+    <a routerLink="/" class="text-xl font-bold flex items-center gap-2 text-primary">
+
+      <i data-lucide="shield-check"></i>
+      <span>InsureAI</span>
+
+    </a>
+
+  </div>
+
+  <nav class="flex-1 p-4 space-y-1 mt-6">
+
+    @for (link of links(); track link.name) {
+
+    <a [routerLink]="link.path" class="nav-link" routerLinkActive="active">
+
+      <i [attr.data-lucide]="link.icon"></i>
+
+      <span>{{link.name}}</span>
+
+    </a>
+
+    }
+
+  </nav>
+
+  <div class="mt-auto border-t border-line p-4">
+    <button (click)="logout()"
+      class="w-full flex items-center gap-3 px-4 py-3 text-muted hover:text-rose-600 transition-colors uppercase tracking-widest text-[10px] font-bold">
+      <i data-lucide="log-out"></i>
+      <span>Sign Out</span>
+    </button>
+  </div>
+
+</div>

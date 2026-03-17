@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #660033;
+  --color-accent: #660033;
+  --color-surface: #ffffff;
+  --color-background: #F7F7F4;
+  --color-ink: #000000;
+  --color-muted: #666666;
+  --color-line: #EBEBEB;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-ink font-sans;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-primary;
+  }
+}
+
+.card {
+  @apply bg-surface rounded-none shadow-none border border-line p-6;
+}
+
+.btn-primary {
+  @apply bg-primary text-white px-6 py-3 rounded-none font-medium hover:opacity-90 transition-all inline-flex items-center justify-center gap-2 uppercase tracking-widest text-xs;
+}
+
+.btn-secondary {
+  @apply bg-transparent text-primary border border-primary px-6 py-3 rounded-none font-medium hover:bg-primary hover:text-white transition-all inline-flex items-center justify-center gap-2 uppercase tracking-widest text-xs;
+}
+
+.input-field {
+  @apply w-full px-4 py-3 rounded-none border border-line bg-white focus:border-primary outline-none transition-all text-sm placeholder:text-muted;
+}
+
+/* Sidebar & Layout */
+.sidebar {
+  @apply w-64 bg-white border-r border-line h-screen fixed left-0 top-0 flex flex-col z-20;
+}
+
+.main-content {
+  @apply ml-64 min-h-screen flex flex-col;
+}
+
+.topbar {
+  @apply h-16 bg-white border-b border-line flex items-center justify-between px-8 sticky top-0 z-10;
+}
+
+.nav-link {
+  @apply flex items-center gap-3 px-4 py-3 text-muted hover:text-primary transition-colors uppercase tracking-widest text-[10px] font-bold;
+}
+
+.nav-link.active {
+  @apply text-primary bg-primary/5 border-l-4 border-primary pl-3;
+}

@@ -1,0 +1,161 @@
+<div id="topbar-container" data-title="My Assignments"></div>
+
+<main class="p-8 space-y-10">
+    <!-- Summary Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+            <h1 class="text-2xl font-black text-ink uppercase tracking-tight">Assigned Policies</h1>
+            <p class="text-[10px] text-muted font-bold uppercase tracking-[0.1em] mt-1">
+                Managed Queue of delegated AI systems requiring risk evaluation
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="card bg-primary/5 border-none p-4 flex items-center gap-4">
+                <div class="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                    <i data-lucide="clipboard-list" size="20"></i>
+                </div>
+                <div>
+                    <p class="text-[9px] font-bold text-muted uppercase tracking-widest">Active Queue</p>
+                    <p class="text-lg font-black text-ink leading-none">{{ filteredPolicies().length }} Policies</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table Card -->
+    <div class="card p-0 overflow-hidden border-line/60">
+        <div
+            class="p-8 border-b border-line/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-50/30">
+            <div>
+                <h2 class="text-lg font-black text-ink uppercase tracking-tight">Underwriting Workbench</h2>
+                <p class="text-[10px] text-muted font-bold uppercase tracking-[0.1em] mt-1">
+                    Execute detailed security & risk audits
+                </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size="14"></i>
+                    <input type="text" placeholder="Search Queue..."
+                        [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)"
+                        class="pl-10 pr-4 py-2 bg-white border border-line text-[10px] font-bold uppercase tracking-widest focus:border-primary outline-none transition-all w-48">
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50">
+                        <th class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40">
+                            Identifier
+                        </th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-center">
+                            Project Status
+                        </th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40">
+                            System Details
+                        </th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-center">
+                            Coverage Limit
+                        </th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-right">
+                            Premium Rate
+                        </th>
+                        <th class="p-6 text-[10px] font-black uppercase tracking-[0.15em] text-muted border-b border-line/40 text-right">
+                            Action
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-line/30">
+                    @if (loading()) {
+                    <tr>
+                        <td colspan="6" class="p-20 text-center">
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                <p class="text-[10px] font-black text-muted uppercase tracking-[0.2em]">Synchronizing Assigned Data...</p>
+                            </div>
+                        </td>
+                    </tr>
+                    } @else if (policies().length === 0) {
+                    <tr>
+                        <td colspan="6" class="p-20 text-center bg-slate-50/10">
+                            <div class="flex flex-col items-center gap-2 opacity-40">
+                                <i data-lucide="shield-check" size="48" class="text-slate-300"></i>
+                                <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">No Assignments</h3>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase">You have no pending policies assigned for review</p>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+
+                    @for (policy of filteredPolicies(); track policy.id) {
+                    <tr class="group hover:bg-slate-50/80 transition-all cursor-default">
+                        <td class="p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors rounded-lg">
+                                    <i data-lucide="hash" size="18"></i>
+                                </div>
+                                <p class="text-sm font-black text-ink">#{{ policy.id }}</p>
+                            </div>
+                        </td>
+
+                        <td class="p-6 text-center">
+                            <span class="text-[9px] font-black px-3 py-1.5 rounded uppercase tracking-widest border"
+                                [ngClass]="{
+                                    'border-amber-500 text-amber-600 bg-amber-50/50': policy.status === 'UNDER_REVIEW',
+                                    'border-primary text-primary bg-primary/5': policy.status === 'PENDING',
+                                    'border-indigo-500 text-indigo-600 bg-indigo-50/50': policy.status === 'ADMIN_REVIEW',
+                                    'border-emerald-500 text-emerald-600 bg-emerald-50/50': policy.status === 'APPROVED' || policy.status === 'ACTIVE',
+                                    'border-rose-500 text-rose-600 bg-rose-50/50': policy.status === 'REJECTED'
+                                }">
+                                {{ policy.status?.replace('_', ' ') }}
+                            </span>
+                        </td>
+
+                        <td class="p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-indigo-50 flex items-center justify-center text-indigo-500 rounded-lg">
+                                    <i data-lucide="cpu" size="20"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-ink group-hover:text-primary transition-colors underline decoration-primary/0 group-hover:decoration-primary/30">
+                                        {{ policy.aiSystem?.name }}
+                                    </p>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-[9px] font-black text-muted uppercase tracking-widest">
+                                            {{ policy.policyType?.name?.replace('_', ' ') }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td class="p-6 text-center">
+                            <p class="text-sm font-bold text-ink">₹{{ (policy.coverageLimit || 0).toLocaleString() }}</p>
+                            <p class="text-[9px] text-muted font-bold uppercase tracking-widest">Max Capability</p>
+                        </td>
+
+                        <td class="p-6 text-right">
+                            <p class="text-base font-black text-emerald-600 tracking-tight">₹{{ (policy.premiumAmount || 0).toLocaleString() }}</p>
+                            <p class="text-[9px] text-muted font-bold uppercase tracking-widest">Annual Premium</p>
+                        </td>
+
+                        <td class="p-6">
+                            <div class="flex items-center justify-end">
+                                <button (click)="goToRisk(policy.id)"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white hover:bg-primary shadow-lg active:scale-95 transition-all w-full sm:w-auto justify-center">
+                                    Assess Risk
+                                    <i data-lucide="shield-alert" size="14"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>

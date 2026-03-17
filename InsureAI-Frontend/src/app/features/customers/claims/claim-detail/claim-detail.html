@@ -1,0 +1,85 @@
+<div id="topbar-container" data-title="Case Evidence"></div>
+
+<main class="p-8 max-w-6xl mx-auto space-y-8">
+    <a routerLink="/company/claim-history" class="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors mb-4">
+        <i data-lucide="arrow-left" size="18"></i>
+        <span class="text-[10px] font-black uppercase tracking-widest">Return to History</span>
+    </a>
+
+    <!-- Loading -->
+    <div *ngIf="loading()" class="py-20 flex flex-col items-center gap-4">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aggregating Case Evidence...</p>
+    </div>
+
+    @if(!loading() && claim()){
+    <div class="space-y-8">
+        <!-- Main Case Header -->
+        <header class="bg-white rounded-[2.5rem] p-10 border border-slate-200 shadow-sm relative overflow-hidden">
+            <div class="flex flex-wrap items-center gap-4 mb-8">
+                <span class="px-4 py-1.5 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-wider">CLAIM-{{claim()?.claimId}}</span>
+                <span [class]="'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ' + 
+                    (claim()?.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 
+                     claim()?.status === 'SETTLED' ? 'bg-emerald-50 text-emerald-600' : 
+                     'bg-blue-50 text-blue-600')">
+                    {{claim()?.status?.replace('_', ' ')}}
+                </span>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-between items-end gap-8">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Requested Amount</p>
+                    <h2 class="text-5xl font-black italic text-slate-900 tracking-tight">₹{{claim()?.claimAmount?.toLocaleString()}}</h2>
+                </div>
+                
+                <div *ngIf="claim()?.payoutAmount" class="bg-emerald-600 text-white rounded-3xl p-6 px-10 shadow-xl shadow-emerald-100 relative group overflow-hidden">
+                    <p class="text-[9px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">Verified Payout</p>
+                    <p class="text-3xl font-black italic">₹{{claim()?.payoutAmount?.toLocaleString()}}</p>
+                    <i data-lucide="shield-check" class="absolute -right-2 -bottom-2 opacity-10 group-hover:scale-110 transition-transform" size="80"></i>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 py-8 border-t border-slate-100 mt-8">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Policy Link</p>
+                    <p class="text-sm font-black text-slate-800">{{claim()?.policyName}} <span class="text-slate-400 font-medium">(POL-{{claim()?.policyId}})</span></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Filing Date</p>
+                    <p class="text-sm font-black text-slate-800">{{claim()?.claimDate}}</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Lifecycle Tracking -->
+        <section class="bg-slate-900 rounded-[2.5rem] p-10 shadow-xl border border-slate-800">
+            <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400 mb-12 text-center">Lifecycle Milestone Tracking</h3>
+            <app-claim-timeline [currentStatus]="claim()!.status"></app-claim-timeline>
+        </section>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Left Side: Narrative & Findings -->
+            <div class="lg:col-span-2 space-y-8">
+                <section class="bg-white rounded-[2.5rem] p-10 border border-slate-200 shadow-sm">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-8 pb-4 border-b border-slate-50">Incident Narrative</h4>
+                    <p class="text-sm font-medium text-slate-600 italic leading-relaxed">"{{claim()?.description}}"</p>
+                </section>
+
+                <section class="bg-white rounded-[2.5rem] p-10 border border-slate-200 shadow-sm">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-8 pb-4 border-b border-slate-50">Official Determination Findings</h4>
+                    <div class="bg-slate-50 rounded-3xl p-8 min-h-[160px] flex items-center">
+                        <p class="text-sm font-medium text-slate-600 italic leading-relaxed">
+                            {{claim()?.adminRemarks || claim()?.officerRemarks || 'Verification process in progress. Our internal audit team is currently evaluating the evidence provided for this claim.'}}
+                        </p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Side: Documents -->
+            <div>
+                <app-claim-documents [claimId]="claimId" [allowUpload]="claim()?.status === 'CLAIM_RAISED' || claim()?.status === 'UNDER_ADMIN_REVIEW'"></app-claim-documents>
+            </div>
+        </div>
+    </div>
+    }
+</main>

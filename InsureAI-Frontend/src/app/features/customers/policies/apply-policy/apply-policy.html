@@ -1,0 +1,132 @@
+<main class="p-8">
+
+    <div class="max-w-2xl mx-auto">
+
+        <div class="card">
+
+            <h2 class="text-xl font-bold mb-4">
+                Issue Insurance Policy
+            </h2>
+
+            @if(selectedPolicy()){
+            <div class="mb-8 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                <h3 class="text-sm font-bold text-primary uppercase tracking-widest mb-1">{{selectedPolicy().name}}</h3>
+                <p class="text-xs text-muted mb-3">{{selectedPolicy().description}}</p>
+                <div class="flex gap-6">
+                    <div>
+                        <p class="text-[9px] font-extrabold text-muted uppercase">Base Price</p>
+                        <p class="text-sm font-bold text-ink">₹{{(selectedPolicy().basePrice ||
+                            selectedPolicy().basePremium ||
+                            0).toLocaleString()}}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-extrabold text-muted uppercase">Allowed Coverage</p>
+                        <p class="text-sm font-bold text-ink">
+                            ₹{{(selectedPolicy().minCoverage || 0).toLocaleString()}} -
+                            ₹{{(selectedPolicy().maxCoverage || 0).toLocaleString()}}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            }
+
+            @if(loading()){
+            <div class="flex flex-col items-center justify-center py-10 gap-3">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                <p class="text-[10px] text-muted uppercase tracking-widest">Identifying requirements...</p>
+            </div>
+            } @else {
+            <form class="space-y-6" [formGroup]="form" (ngSubmit)="submit()">
+
+                <label class="block">
+
+                    <span class="text-sm font-medium">
+                        Select AI System <span class="text-rose-500">*</span>
+                    </span>
+
+                    <select class="input-field" formControlName="aiSystemId"
+                        [ngClass]="{'border-rose-500': f.aiSystemId.invalid && f.aiSystemId.touched}">
+
+                        <option value="">Select System</option>
+
+                        @if(loading()) {
+                        <option disabled>Loading systems...</option>
+                        } @else {
+                        @for(system of systems(); track system.id){
+
+                        <option [value]="system.id">
+                            {{system.name}}
+                        </option>
+
+                        }
+                        }
+
+                    </select>
+                    @if(f.aiSystemId.invalid && f.aiSystemId.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">AI System is required</p>
+                    }
+
+                </label>
+
+                <label class="block">
+
+                    <span class="text-sm font-medium">
+                        Coverage Limit <span class="text-rose-500">*</span>
+                    </span>
+
+                    <input type="number" class="input-field" formControlName="coverageLimit"
+                        [ngClass]="{'border-rose-500': f.coverageLimit.invalid && f.coverageLimit.touched}">
+                    @if(f.coverageLimit.invalid && f.coverageLimit.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Coverage limit must be valid</p>
+                    }
+
+                </label>
+
+                <label class="block">
+
+                    <span class="text-sm font-medium">
+                        Deductible Amount <span class="text-rose-500">*</span>
+                    </span>
+
+                    <input type="number" class="input-field" formControlName="deductibleAmount"
+                        [ngClass]="{'border-rose-500': f.deductibleAmount.invalid && f.deductibleAmount.touched}">
+                    @if(f.deductibleAmount.invalid && f.deductibleAmount.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Deductible amount is required</p>
+                    }
+
+                </label>
+
+                <label class="block">
+
+                    <span class="text-sm font-medium">
+                        Tenure (Years) <span class="text-rose-500">*</span>
+                    </span>
+
+                    <input type="number" class="input-field" formControlName="tenureYears"
+                        [ngClass]="{'border-rose-500': f.tenureYears.invalid && f.tenureYears.touched}">
+                    @if(f.tenureYears.invalid && f.tenureYears.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Tenure is required</p>
+                    }
+
+                </label>
+
+                <div class="flex gap-4">
+
+                    <button type="button" class="btn-secondary flex-1" routerLink="/company/policy-types">
+                        Cancel
+                    </button>
+
+                    <button type="submit" class="btn-primary flex-[2] disabled:opacity-50" [disabled]="form.invalid">
+                        Request Policy
+                    </button>
+
+                </div>
+
+            </form>
+            }
+
+        </div>
+
+    </div>
+
+</main>

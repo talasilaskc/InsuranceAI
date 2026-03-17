@@ -1,0 +1,70 @@
+<div id="topbar-container" data-title="AI Systems"></div>
+
+<main class="p-8 space-y-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="relative flex-1 max-w-md">
+            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size="18"></i>
+            <input type="text" placeholder="Search AI systems..." class="input-field !pl-12">
+        </div>
+        <div class="flex items-center gap-3">
+            <button class="btn-secondary"><i data-lucide="filter"></i> Filter</button>
+            <button routerLink="/company/register-ai-system" class="btn-primary"><i data-lucide="plus"></i> Register New
+                System</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @if(loading()) {
+        <div class="col-span-full flex justify-center py-20">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+        } @else if(systems().length === 0) {
+        <div class="col-span-full text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <i data-lucide="cpu" class="mx-auto text-slate-300 mb-4" size="48"></i>
+            <h3 class="text-lg font-bold text-slate-900 mb-2">No AI Systems Found</h3>
+            <p class="text-slate-500 mb-6">Register your first AI system to begin risk assessment and obtain liability
+                coverage.</p>
+            <button routerLink="/company/register-ai-system" class="btn-primary">Register New System</button>
+        </div>
+        } @else {
+        @for (system of systems(); track system.id) {
+        <div class="card group hover:border-primary/30 transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center" [ngClass]="getSystemColor(system.modelType)">
+                    <i [attr.data-lucide]="getSystemIcon(system.modelType)"></i>
+                </div>
+                <button class="text-slate-400 hover:text-slate-600"><i data-lucide="more-vertical"></i></button>
+            </div>
+            <div class="mb-6">
+                <div class="flex items-center gap-2 mb-1">
+                    <h3 class="text-lg font-bold text-slate-900">{{ system.name }}</h3>
+                    @if (system.businessCritical) {
+                    <span
+                        class="bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Critical</span>
+                    }
+                </div>
+                <p class="text-sm text-slate-500">{{ system.modelType }} • {{ system.deploymentType }}</p>
+            </div>
+            <div class="flex gap-4">
+                @let activePolicy = getActivePolicyForSystem(system.id);
+                
+                @if (activePolicy) {
+                    <a [routerLink]="['/company/submit-claim']" [queryParams]="{ policyId: activePolicy.policyId }"
+                        class="btn-primary bg-rose-600 hover:bg-rose-700 border-none flex-1 text-[10px] py-3 uppercase font-black tracking-widest flex items-center justify-center gap-2">
+                        <i data-lucide="alert-circle" size="14"></i>
+                        File Claim
+                    </a>
+                } @else {
+                    <a [routerLink]="['/company/policy-types']" [queryParams]="{ systemId: system.id }"
+                        class="btn-primary flex-1 text-[10px] py-3 uppercase font-black tracking-widest flex items-center justify-center gap-2">
+                        <i data-lucide="shield-check" size="14"></i>
+                        Apply Policy
+                    </a>
+                }
+            </div>
+
+        </div>
+        }
+        }
+    </div>
+</main>

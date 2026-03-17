@@ -1,0 +1,150 @@
+<div class="p-10 space-y-12 max-w-7xl">
+    <!-- Breadcrumb & Header -->
+    <header class="space-y-6">
+        <div class="flex items-center justify-between">
+            <a routerLink="/officer/dashboard" class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted hover:text-primary transition-colors">
+                <i data-lucide="arrow-left" size="14"></i>
+                <span>Return to Workbench</span>
+            </a>
+            <div class="flex items-center gap-3">
+                <span class="text-[10px] font-bold text-muted uppercase tracking-widest">Dossier #{{claim()?.claimId}}</span>
+                <span [class]="'px-4 py-1 text-[9px] font-bold uppercase tracking-widest border ' + getStatusClass(claim()?.status)">
+                    {{claim()?.status}}
+                </span>
+            </div>
+        </div>
+        
+        <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-line pb-10 gap-6">
+            <div class="space-y-2">
+                <p class="text-[10px] font-bold text-primary uppercase tracking-[0.3em]">Evaluation for</p>
+                <h2 class="text-6xl font-bold text-ink tracking-tighter uppercase">{{claim()?.companyName}}</h2>
+            </div>
+            <div class="bg-white border border-line p-6 min-w-[300px]">
+                <p class="text-[9px] font-bold text-muted uppercase tracking-widest mb-1">Asset Model</p>
+                <p class="text-xl font-bold text-ink uppercase tracking-tight">{{claim()?.aiSystemName}}</p>
+            </div>
+        </div>
+    </header>
+
+    <div *ngIf="!loading() && claim()" class="grid lg:grid-cols-12 gap-12">
+        
+        <!-- Main Analysis -->
+        <div class="lg:col-span-8 space-y-12">
+            
+            <!-- Financial Summary -->
+            <section class="grid md:grid-cols-3 gap-0 border border-line bg-line">
+                <div class="bg-white p-8">
+                    <p class="text-[9px] font-bold text-muted uppercase tracking-widest mb-2">Claimed Amount</p>
+                    <p class="text-3xl font-bold text-ink tracking-tighter">₹{{claim()?.claimAmount?.toLocaleString()}}</p>
+                </div>
+                <div class="bg-white p-8 border-l border-line">
+                    <p class="text-[9px] font-bold text-muted uppercase tracking-widest mb-2">Max Coverage</p>
+                    <p class="text-3xl font-bold text-ink tracking-tighter">₹{{claim()?.coverageAmount?.toLocaleString()}}</p>
+                </div>
+                <div class="bg-white p-8 border-l border-line">
+                    <p class="text-[9px] font-bold text-primary uppercase tracking-widest mb-2">Remaining Room</p>
+                    <p class="text-3xl font-bold text-primary tracking-tighter">₹{{claim()?.remainingCoverage?.toLocaleString()}}</p>
+                </div>
+            </section>
+
+            <!-- Narrative -->
+            <section class="bg-white border border-line p-10 space-y-6">
+                <div class="flex items-center gap-4">
+                    <span class="w-8 h-px bg-primary"></span>
+                    <h3 class="text-[10px] font-bold uppercase tracking-[0.4em] text-primary">Incident Narrative</h3>
+                </div>
+                <p class="text-xl font-medium text-ink leading-relaxed border-l-4 border-line pl-8">
+                    {{claim()?.description}}
+                </p>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 pt-6">
+                    <div>
+                        <p class="text-[8px] font-bold text-muted uppercase tracking-widest mb-1">Policy ID</p>
+                        <p class="text-sm font-bold text-ink">POL-{{claim()?.policyId}}</p>
+                    </div>
+                    <div>
+                        <p class="text-[8px] font-bold text-muted uppercase tracking-widest mb-1">Coverage Type</p>
+                        <p class="text-sm font-bold text-ink">{{claim()?.policyName}}</p>
+                    </div>
+                    <div>
+                        <p class="text-[8px] font-bold text-muted uppercase tracking-widest mb-1">Event Date</p>
+                        <p class="text-sm font-bold text-ink">{{claim()?.claimDate | date:'MMM d, yyyy' | uppercase}}</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Evidence Section -->
+            <section class="space-y-6">
+                <h3 class="text-[10px] font-bold uppercase tracking-[0.4em] text-muted">Evidence Archive</h3>
+                <div class="bg-white border border-line p-8">
+                    <app-claim-documents [claimId]="claimId" [allowUpload]="claim()!.status === 'UNDER_INVESTIGATION'"></app-claim-documents>
+                </div>
+            </section>
+        </div>
+
+        <!-- Investigation Actions -->
+        <div class="lg:col-span-4 space-y-12">
+            
+            <!-- Process Status -->
+            <section class="bg-ink p-8 text-white">
+                <p class="text-[9px] font-bold uppercase tracking-[0.4em] text-muted mb-8 border-b border-white/10 pb-4">Lifecycle Progress</p>
+                <div class="space-y-4">
+                   <app-claim-timeline [currentStatus]="claim()!.status"></app-claim-timeline>
+                </div>
+            </section>
+
+            <!-- Action Controls -->
+            <div *ngIf="claim()?.status === 'ASSIGNED_TO_OFFICER'" class="bg-white border-2 border-primary p-10 text-center space-y-6">
+                <i data-lucide="shield-alert" class="mx-auto text-primary" size="48"></i>
+                <div>
+                    <h3 class="text-xl font-bold text-ink uppercase tracking-tight">Open Dossier</h3>
+                    <p class="text-muted text-[10px] uppercase tracking-widest mt-2 px-4">Initialization will lock this case for review.</p>
+                </div>
+                <button (click)="startInvestigation()" class="btn-primary w-full">
+                    Start Investigation
+                </button>
+            </div>
+
+            <!-- Determination Form -->
+            <div *ngIf="claim()?.status === 'UNDER_INVESTIGATION' || claim()?.status === 'OFFICER_RECOMMENDED'" 
+                class="bg-white border border-line p-10 space-y-8">
+                
+                <h3 class="text-[10px] font-bold uppercase tracking-[0.4em] text-primary border-b border-line pb-4">Determination</h3>
+
+                <form [formGroup]="recommendForm" (ngSubmit)="submitRecommendation()" class="space-y-8">
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-muted block">Proposed Settlement Amount (₹)</label>
+                        <div class="relative group">
+                            <input type="number" formControlName="recommendedPayoutAmount" 
+                                class="w-full bg-background border border-line p-6 font-bold text-3xl text-ink outline-none focus:border-primary transition-all">
+                            <span class="absolute right-6 top-1/2 -translate-y-1/2 text-muted">₹</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-muted block">Executive Findings</label>
+                        <textarea formControlName="officerRemarks" rows="6"
+                            class="w-full bg-background border border-line p-6 text-sm font-medium text-ink placeholder:text-line transition-all outline-none resize-none"
+                            placeholder="Detail analysis and reasoning..."></textarea>
+                    </div>
+
+                    <button *ngIf="claim()?.status === 'UNDER_INVESTIGATION'" type="submit" [disabled]="recommendForm.invalid || submitting()"
+                        class="btn-primary w-full py-6">
+                        <span *ngIf="!submitting()">Sign & Certify</span>
+                        <div *ngIf="submitting()" class="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></div>
+                    </button>
+
+                    <div *ngIf="claim()?.status === 'OFFICER_RECOMMENDED'" class="p-6 bg-emerald-50 border border-emerald-200 text-center">
+                        <p class="text-[10px] font-bold text-emerald-800 uppercase tracking-widest">Findings Locked</p>
+                        <p class="text-[10px] text-emerald-600 uppercase tracking-widest mt-1 opacity-60 italic">Report Sent to Admin</p>
+                    </div>
+                </form>
+            </div>
+            
+            <div *ngIf="claim()?.status !== 'ASSIGNED_TO_OFFICER' && claim()?.status !== 'UNDER_INVESTIGATION' && claim()?.status !== 'OFFICER_RECOMMENDED'" 
+                class="bg-background border border-line p-10 text-center space-y-4 opacity-70">
+                <p class="text-[10px] font-bold text-muted uppercase tracking-widest">Case Concluded</p>
+                <p class="text-[10px] text-muted italic">The officer report has been filed and the case is closed for investigator access.</p>
+            </div>
+        </div>
+    </div>
+</div>

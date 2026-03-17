@@ -1,0 +1,140 @@
+<form class="space-y-8" [formGroup]="aiForm" (ngSubmit)="submit()">
+
+    <!-- BASIC INFORMATION -->
+
+    <div class="card">
+        <h3 class="text-md font-bold text-slate-800 mb-6">
+            AI System Details
+        </h3>
+
+        <div class="grid md:grid-cols-2 gap-6">
+
+            <div class="col-span-1">
+                <input class="input-field" placeholder="AI System Name *" formControlName="name"
+                    [ngClass]="{'border-rose-500': f.name.invalid && f.name.touched}">
+                @if(f.name.invalid && f.name.touched){
+                    <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Name is required</p>
+                }
+            </div>
+
+            <div class="col-span-1">
+                <input class="input-field" placeholder="Version *" formControlName="version">
+            </div>
+
+            <div class="md:col-span-2">
+                <textarea class="input-field" placeholder="Description *" formControlName="description"></textarea>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- OWNERSHIP & DEPLOYMENT -->
+
+    <div class="card">
+
+        <h3 class="text-md font-bold text-slate-800 mb-6">
+            Ownership & Deployment
+        </h3>
+
+        <div class="grid md:grid-cols-2 gap-6">
+
+            <div class="col-span-1">
+                <select class="input-field" formControlName="ownershipType"
+                    [ngClass]="{'border-rose-500': f.ownershipType.invalid && f.ownershipType.touched}">
+                    <option value="">Select Ownership *</option>
+                    <option value="OWNED">Owned (In-house)</option>
+                    <option value="THIRD_PARTY_API">Third Party API</option>
+                </select>
+                @if(f.ownershipType.invalid && f.ownershipType.touched){
+                    <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Ownership is required</p>
+                }
+            </div>
+
+            <div class="col-span-1">
+                <select class="input-field" formControlName="deploymentType"
+                    [ngClass]="{'border-rose-500': f.deploymentType.invalid && f.deploymentType.touched}">
+                    <option value="">Select Deployment *</option>
+                    <option value="CLOUD">Cloud</option>
+                    <option value="ON_PREM">On Premise</option>
+                    <option value="HYBRID">Hybrid</option>
+                </select>
+                @if(f.deploymentType.invalid && f.deploymentType.touched){
+                    <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Deployment is required</p>
+                }
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- MODEL DETAILS -->
+
+    <div class="card">
+
+        <h3 class="text-md font-bold text-slate-800 mb-6">
+            Model Details
+        </h3>
+
+        <div class="grid md:grid-cols-2 gap-6">
+
+            <div class="col-span-1">
+                <select class="input-field" formControlName="modelType"
+                    [ngClass]="{'border-rose-500': f.modelType.invalid && f.modelType.touched}">
+                    <option value="">Select Model Type *</option>
+                    <option value="LLM">Large Language Model (LLM)</option>
+                    <option value="NLP">Natural Language Processing (NLP)</option>
+                    <option value="CV">Computer Vision (CV)</option>
+                    <option value="RISK_ENGINE">Risk Engine</option>
+                    <option value="OTHER">Other</option>
+                </select>
+                @if(f.modelType.invalid && f.modelType.touched){
+                    <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Model Type is required</p>
+                }
+            </div>
+
+            <div class="col-span-1">
+                <select class="input-field" formControlName="dataExposureCategory"
+                    [ngClass]="{'border-rose-500': f.dataExposureCategory.invalid && f.dataExposureCategory.touched}">
+                    <option value="">Select Data Category *</option>
+                    <option value="GENERIC">Generic Data</option>
+                    <option value="PERSONAL">Personal Data (PII)</option>
+                    <option value="FINANCIAL">Financial Data</option>
+                    <option value="HEALTH">Health Data</option>
+                </select>
+                @if(f.dataExposureCategory.invalid && f.dataExposureCategory.touched){
+                    <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Data Category is required</p>
+                }
+            </div>
+
+            <div class="col-span-1">
+                <input type="date" class="input-field" formControlName="productionSince">
+            </div>
+
+            <div class="col-span-1 flex items-center">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" formControlName="businessCritical">
+                    Business Critical System <span class="text-rose-500">*</span>
+                </label>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="flex justify-end gap-4">
+
+        <button type="button" class="btn-secondary px-8" (click)="cancel()">
+            Cancel
+        </button>
+
+        <button type="submit" class="btn-primary px-12 disabled:opacity-50 disabled:cursor-not-allowed"
+            [disabled]="aiForm.invalid">
+            Register AI System
+        </button>
+
+    </div>
+
+</form>

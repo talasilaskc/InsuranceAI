@@ -1,0 +1,158 @@
+<div id="topbar-container" data-title="Underwriter Dashboard"></div>
+
+<main class="p-8 space-y-8">
+    @if (loading()) {
+        <div class="flex flex-col justify-center items-center py-20 space-y-4">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-line border-t-primary"></div>
+            <p class="text-xs font-bold text-muted uppercase tracking-widest animate-pulse">Syncing Audit Terminal...</p>
+        </div>
+    } @else {
+        <!-- ⭐ KPI CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <a routerLink="/underwriter/policies" class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-primary shadow-sm hover:shadow-md cursor-pointer group">
+                <div class="bg-primary/5 p-4 text-primary group-hover:scale-110 transition-transform">
+                    <i data-lucide="clipboard-list" size="28"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Assigned Tasks</p>
+                    <p class="text-3xl font-bold text-ink tracking-tight">{{ stats().assignedTasks }}</p>
+                </div>
+            </a>
+
+            <div class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-amber-500 shadow-sm hover:shadow-md group">
+                <div class="bg-amber-50 p-4 text-amber-600 group-hover:scale-110 transition-transform">
+                    <i data-lucide="clock" size="28"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Pending Reviews</p>
+                    <p class="text-3xl font-bold text-ink tracking-tight">{{ stats().pendingReviews }}</p>
+                </div>
+            </div>
+
+            <div class="card p-5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 border-l-4 border-emerald-500 shadow-sm hover:shadow-md group">
+                <div class="bg-emerald-50 p-4 text-emerald-600 group-hover:scale-110 transition-transform">
+                    <i data-lucide="check-circle" size="28"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">Completed Today</p>
+                    <p class="text-3xl font-bold text-ink tracking-tight">{{ stats().completedToday }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Working Section -->
+        <div class="grid lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-6">
+                <div class="card p-0 overflow-hidden shadow-sm">
+                    <div class="p-6 border-b border-line bg-surface/50 flex justify-between items-center">
+                        <h2 class="text-sm font-bold text-ink uppercase tracking-widest flex items-center gap-2">
+                            <i data-lucide="zap" size="18" class="text-primary"></i>
+                            Recent Assignments
+                        </h2>
+                        <a routerLink="/underwriter/policies" class="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
+                            View All Queue
+                        </a>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-background text-left text-[10px] font-bold text-muted uppercase tracking-widest border-b border-line">
+                                    <th class="px-6 py-4">ID & System</th>
+                                    <th class="px-6 py-4">Requested On</th>
+                                    <th class="px-6 py-4">Project Status</th>
+                                    <th class="px-6 py-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-line">
+                                @for (policy of assignedPolicies(); track policy.id) {
+                                    <tr class="hover:bg-slate-50/50 transition-colors group">
+                                        <td class="px-6 py-4">
+                                            <div class="flex flex-col">
+                                                <span class="text-xs font-bold text-primary mb-0.5">POL-{{policy.id}}</span>
+                                                <span class="text-[11px] font-bold text-ink uppercase tracking-tight">{{policy.aiSystem?.name || 'GEN-AI SYSTEM'}}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-xs font-medium text-muted">
+                                            12 MAR 2024
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-[9px] font-black px-3 py-1.5 rounded uppercase tracking-widest border"
+                                                [ngClass]="{
+                                                    'border-amber-500 text-amber-600 bg-amber-50/50': policy.status === 'UNDER_REVIEW',
+                                                    'border-primary text-primary bg-primary/5': policy.status === 'PENDING',
+                                                    'border-indigo-500 text-indigo-600 bg-indigo-50/50': policy.status === 'ADMIN_REVIEW',
+                                                    'border-emerald-500 text-emerald-600 bg-emerald-50/50': policy.status === 'APPROVED' || policy.status === 'ACTIVE',
+                                                    'border-rose-500 text-rose-600 bg-rose-50/50': policy.status === 'REJECTED'
+                                                }">
+                                                {{ policy.status?.replace('_', ' ') }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-right">
+                                            <a [routerLink]="['/underwriter/policy', policy.id, 'risk']" 
+                                               class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-[9px] font-bold uppercase tracking-widest hover:bg-ink transition-all active:scale-95 shadow-sm">
+                                                Assess Risk
+                                                <i data-lucide="chevron-right" size="12"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (assignedPolicies().length === 0) {
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-10 text-center">
+                                            <div class="flex flex-col items-center justify-center text-muted">
+                                                <i data-lucide="inbox" size="32" class="mb-4 opacity-50"></i>
+                                                <p class="text-sm font-bold uppercase tracking-widest">No Recent Assignments</p>
+                                                <p class="text-xs mt-2">All tasks are currently cleared.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guidelines Sidebar -->
+            <div class="space-y-6">
+                <!-- System Performance Insight -->
+                <div class="card border-0 bg-ink text-white p-6 relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 opacity-10 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-700">
+                        <i data-lucide="trending-up" size="140"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-[10px] uppercase tracking-widest font-bold opacity-80 flex items-center gap-2">
+                                <i data-lucide="activity" size="14"></i>
+                                Precision Metrics
+                            </h3>
+                        </div>
+                        <p class="text-xs text-white/70 mb-1">Audit Efficiency Index</p>
+                        <p class="text-3xl font-bold tracking-tight mb-2">92.4%</p>
+                        <p class="text-white/70 text-xs font-medium">
+                            Your risk evaluation accuracy is currently trending above the department average. Keep it up.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-l-4 border-indigo-500">
+                    <h3 class="text-[10px] font-bold text-muted uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <i data-lucide="shield" size="14" class="text-indigo-500"></i>
+                        Underwriting Guidelines
+                    </h3>
+                    <ul class="space-y-4">
+                        <li class="flex gap-3">
+                            <i data-lucide="info" size="14" class="text-indigo-400 mt-0.5"></i>
+                            <p class="text-[11px] font-bold text- ink group-hover:text-primary leading-tight uppercase">Verify data leaks in logs.</p>
+                        </li>
+                        <li class="flex gap-3">
+                            <i data-lucide="info" size="14" class="text-indigo-400 mt-0.5"></i>
+                            <p class="text-[11px] font-bold text-ink leading-tight uppercase">Check governance compliance protocols.</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    }
+</main>

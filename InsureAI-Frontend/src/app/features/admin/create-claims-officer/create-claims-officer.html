@@ -1,0 +1,94 @@
+<div id="topbar-container" data-title="Create Claims Officer"></div>
+
+<main class="p-8 pb-32 max-w-2xl mx-auto space-y-8">
+    <div class="flex items-center gap-4">
+        <h2 class="text-xl font-bold text-ink">Create Claims Officer User</h2>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-8">
+        <div class="card p-0 overflow-hidden shadow-sm">
+            <div class="p-6 border-b border-line bg-slate-50/50 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <h3 class="text-sm font-bold text-ink uppercase tracking-widest">User Details</h3>
+                    <p class="text-[10px] text-muted mt-1">Provide the information to create a new claims officer account.</p>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <!-- Full Name -->
+                <div>
+                    <label class="block text-xs font-bold text-ink uppercase tracking-widest mb-2 flex justify-between">
+                        Full Name <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted">
+                            <i data-lucide="user" size="16"></i>
+                        </span>
+                        <input type="text" formControlName="fullName" placeholder="Enter full name"
+                            class="w-full pl-11 pr-4 py-3 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors"
+                            [ngClass]="{'border-rose-500': f.fullName.invalid && f.fullName.touched}">
+                    </div>
+                    @if(f.fullName.invalid && f.fullName.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">Full name is required</p>
+                    }
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block text-xs font-bold text-ink uppercase tracking-widest mb-2 flex justify-between">
+                        Email Address <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted">
+                            <i data-lucide="mail" size="16"></i>
+                        </span>
+                        <input type="email" formControlName="email" placeholder="officer@insureai.com"
+                            class="w-full pl-11 pr-4 py-3 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors"
+                            [ngClass]="{'border-rose-500': f.email.invalid && f.email.touched}">
+                    </div>
+                    @if(f.email.invalid && f.email.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">
+                            @if(f.email.errors?.['required']) { Email is required }
+                            @if(f.email.errors?.['email']) { Invalid email format }
+                        </p>
+                    }
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label class="block text-xs font-bold text-ink uppercase tracking-widest mb-2 flex justify-between">
+                        Temporary Password <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-muted">
+                            <i data-lucide="lock" size="16"></i>
+                        </span>
+                        <input type="password" formControlName="password" placeholder="••••••••"
+                            class="w-full pl-11 pr-4 py-3 bg-white border border-line text-sm rounded-md focus:border-primary outline-none transition-colors"
+                            [ngClass]="{'border-rose-500': f.password.invalid && f.password.touched}">
+                    </div>
+                    @if(f.password.invalid && f.password.touched){
+                        <p class="text-[10px] text-rose-500 font-bold mt-1.5 uppercase tracking-widest">
+                            @if(f.password.errors?.['required']) { Password is required }
+                            @if(f.password.errors?.['minlength']) { Password must be at least 6 characters }
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex items-center justify-end gap-4 pt-4">
+            <button type="submit" [disabled]="submitting() || form.invalid"
+                class="btn-primary w-full sm:w-auto px-8 py-3 text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                @if(submitting()) {
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Creating User...
+                } @else {
+                    <i data-lucide="user-plus" size="14"></i>
+                    Create Claims Officer Account
+                }
+            </button>
+        </div>
+    </form>
+</main>
