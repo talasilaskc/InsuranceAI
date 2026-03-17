@@ -1,0 +1,2087 @@
+RiskAssessmentServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.dto.CreateRiskAssessmentRequest;
+import com.project.InsureAI.dto.RiskAssessmentResponse;
+import com.project.InsureAI.entity.*;
+import com.project.InsureAI.exception.ResourceNotFoundException;
+import com.project.InsureAI.repository.AISystemRepository;
+import com.project.InsureAI.repository.RiskAssessmentRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class RiskAssessmentServiceTest {
+
+    @Mock
+    private RiskAssessmentRepository riskRepository;
+
+    @Mock
+    private AISystemRepository aiSystemRepository;
+
+    @Mock
+    private AuthService authService;
+
+    @Mock
+    private RiskCalculationEngine riskEngine;
+
+    @InjectMocks
+    private RiskAssessmentService service;
+
+    private Company company() {
+        Company c = new Company();
+        c.setId(1L);
+        return c;
+    }
+
+    private MyUser user(Company c) {
+        MyUser u = new MyUser();
+        u.setId(10L);
+        u.setCompany(c);
+        return u;
+    }
+
+    private AISystem aiSystem(Company c) {
+        AISystem ai = new AISystem();
+        ai.setId(5L);
+        ai.setCompany(c);
+        return ai;
+    }
+
+    @Test
+    void createRiskAssessment_success_withoutPreviousRisk() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+
+        CreateRiskAssessmentRequest req = new CreateRiskAssessmentRequest();
+        req.setAiSystemId(5L);
+        req.setHumanOversight(true);
+        req.setBiasTesting(true);
+        req.setAuditLogsMaintained(true);
+        req.setLifeCriticalUsage(false);
+        req.setPastIncidentCount(1);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.of(ai));
+        when(riskRepository.findByAiSystemAndIsActiveTrue(ai)).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            RiskAssessment r = invocation.getArgument(0);
+            r.setGovernanceScore(70);
+            r.setExposureScore(60);
+            r.setImpactScore(65);
+            r.setTotalRiskScore(65);
+            r.setRiskLevel(RiskLevel.MEDIUM);
+            return null;
+        }).when(riskEngine).calculateRisk(any());
+
+        when(riskRepository.save(any())).thenAnswer(i -> {
+            RiskAssessment r = i.getArgument(0);
+            r.setId(100L);
+            return r;
+        });
+
+        RiskAssessmentResponse res = service.createRiskAssessment(req);
+
+        assertEquals(100L, res.getId());
+        assertEquals(RiskLevel.MEDIUM, res.getRiskLevel());
+        verify(riskEngine).calculateRisk(any());
+        verify(riskRepository).save(any());
+    }
+
+    @Test
+    void createRiskAssessment_success_withPreviousRiskDeactivated() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+
+        RiskAssessment existing = new RiskAssessment();
+        existing.setId(50L);
+        existing.setAiSystem(ai);
+        existing.setActive(true);
+
+        CreateRiskAssessmentRequest req = new CreateRiskAssessmentRequest();
+        req.setAiSystemId(5L);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.of(ai));
+        when(riskRepository.findByAiSystemAndIsActiveTrue(ai)).thenReturn(Optional.of(existing));
+
+        doNothing().when(riskEngine).calculateRisk(any());
+
+        when(riskRepository.save(any())).thenAnswer(i -> {
+            RiskAssessment r = i.getArgument(0);
+            if (r.getId() == null) r.setId(200L);
+            return r;
+        });
+
+        RiskAssessmentResponse res = service.createRiskAssessment(req);
+
+        assertFalse(existing.isActive());
+        verify(riskRepository, times(2)).save(any());
+        assertEquals(200L, res.getId());
+    }
+
+    @Test
+    void createRiskAssessment_aiSystemNotFound() {
+
+        Company c = company();
+        MyUser u = user(c);
+
+        CreateRiskAssessmentRequest req = new CreateRiskAssessmentRequest();
+        req.setAiSystemId(5L);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.createRiskAssessment(req));
+    }
+}
+
+PremiumCalculationServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.dto.PremiumCalculationRequest;
+import com.project.InsureAI.dto.PremiumCalculationResponse;
+import com.project.InsureAI.entity.*;
+import com.project.InsureAI.exception.BusinessException;
+import com.project.InsureAI.exception.ResourceNotFoundException;
+import com.project.InsureAI.repository.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class PremiumCalculationServiceTest {
+
+    @Mock
+    private AuthService authService;
+    @Mock
+    private AISystemRepository aiSystemRepository;
+    @Mock
+    private InsurancePolicyTypeRepository policyTypeRepository;
+    @Mock
+    private RiskAssessmentRepository riskRepository;
+    @Mock
+    private PolicyRepository policyRepository;
+    @Mock
+    private ClaimRepository claimRepository;
+    @Mock
+    private PremiumCalculationEngine engine;
+
+    @InjectMocks
+    private PremiumCalculationService service;
+
+    private Company company() {
+        Company c = new Company();
+        c.setId(1L);
+        return c;
+    }
+
+    private MyUser user(Company c) {
+        MyUser u = new MyUser();
+        u.setId(10L);
+        u.setCompany(c);
+        return u;
+    }
+
+    private AISystem aiSystem(Company c) {
+        AISystem ai = new AISystem();
+        ai.setId(5L);
+        ai.setCompany(c);
+        return ai;
+    }
+
+    private InsurancePolicyType policyType() {
+        InsurancePolicyType t = new InsurancePolicyType();
+        t.setId(2L);
+        t.setActive(true);
+        t.setBasePrice(10000);
+        t.setMinCoverage(100000);
+        t.setMaxCoverage(1000000);
+        return t;
+    }
+
+    private RiskAssessment risk(AISystem ai) {
+        RiskAssessment r = new RiskAssessment();
+        r.setId(3L);
+        r.setAiSystem(ai);
+        r.setRiskLevel(RiskLevel.MEDIUM);
+        r.setActive(true);
+        return r;
+    }
+
+    @Test
+    void calculatePremium_success() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+        InsurancePolicyType type = policyType();
+        RiskAssessment risk = risk(ai);
+
+        PremiumCalculationRequest req = new PremiumCalculationRequest();
+        req.setAiSystemId(5L);
+        req.setPolicyTypeId(2L);
+        req.setCoverageLimit(500000);
+        req.setDeductibleAmount(5000);
+        req.setTenureYears(2);
+
+        Policy prev = new Policy();
+        prev.setId(9L);
+
+        PremiumBreakdown breakdown = new PremiumBreakdown();
+        breakdown.setBasePrice(10000);
+        breakdown.setExposurePremium(15000);
+        breakdown.setRiskAdjusted(17000);
+        breakdown.setExperienceAdjusted(18000);
+        breakdown.setDeductibleAdjusted(17500);
+        breakdown.setTechnicalPremium(20000);
+        breakdown.setTax(3600);
+        breakdown.setTotalPayable(23600);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.of(ai));
+        when(policyTypeRepository.findById(2L)).thenReturn(Optional.of(type));
+        when(riskRepository.findByAiSystemAndIsActiveTrue(ai)).thenReturn(Optional.of(risk));
+        when(policyRepository.findTopByAiSystemOrderByEndDateDesc(ai)).thenReturn(prev);
+        when(claimRepository.countByPolicy(prev)).thenReturn(2);
+        when(engine.calculate(anyDouble(), anyDouble(), any(), anyInt(), anyDouble(), anyInt()))
+                .thenReturn(breakdown);
+
+        PremiumCalculationResponse res = service.calculatePremium(req);
+
+        assertEquals(23600, res.getTotalPayable());
+        verify(engine).calculate(anyDouble(), anyDouble(), any(), anyInt(), anyDouble(), anyInt());
+    }
+
+    @Test
+    void calculatePremium_aiSystemNotFound() {
+
+        Company c = company();
+        MyUser u = user(c);
+
+        PremiumCalculationRequest req = new PremiumCalculationRequest();
+        req.setAiSystemId(5L);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.calculatePremium(req));
+    }
+
+    @Test
+    void calculatePremium_policyTypeInactive() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+        InsurancePolicyType type = policyType();
+        type.setActive(false);
+
+        PremiumCalculationRequest req = new PremiumCalculationRequest();
+        req.setAiSystemId(5L);
+        req.setPolicyTypeId(2L);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.of(ai));
+        when(policyTypeRepository.findById(2L)).thenReturn(Optional.of(type));
+
+        assertThrows(BusinessException.class,
+                () -> service.calculatePremium(req));
+    }
+
+    @Test
+    void calculatePremium_invalidCoverage() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+        InsurancePolicyType type = policyType();
+
+        PremiumCalculationRequest req = new PremiumCalculationRequest();
+        req.setAiSystemId(5L);
+        req.setPolicyTypeId(2L);
+        req.setCoverageLimit(50000); // below min
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.of(ai));
+        when(policyTypeRepository.findById(2L)).thenReturn(Optional.of(type));
+
+        assertThrows(BusinessException.class,
+                () -> service.calculatePremium(req));
+    }
+
+    @Test
+    void calculatePremium_noRiskAssessment() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+        InsurancePolicyType type = policyType();
+
+        PremiumCalculationRequest req = new PremiumCalculationRequest();
+        req.setAiSystemId(5L);
+        req.setPolicyTypeId(2L);
+        req.setCoverageLimit(500000);
+        req.setDeductibleAmount(5000);
+        req.setTenureYears(2);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.of(ai));
+        when(policyTypeRepository.findById(2L)).thenReturn(Optional.of(type));
+        when(riskRepository.findByAiSystemAndIsActiveTrue(ai)).thenReturn(Optional.empty());
+
+        assertThrows(BusinessException.class,
+                () -> service.calculatePremium(req));
+    }
+}
+
+PolicyTypeServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.entity.InsurancePolicyType;
+import com.project.InsureAI.exception.ResourceNotFoundException;
+import com.project.InsureAI.repository.InsurancePolicyTypeRepository;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.extension.ExtendWith;
+
+@ExtendWith(MockitoExtension.class)
+class PolicyTypeServiceTest {
+
+    @Mock
+    InsurancePolicyTypeRepository repository;
+
+    @InjectMocks
+    PolicyTypeService service;
+
+    @Test
+    void testCreatePolicyType() {
+
+        InsurancePolicyType input = new InsurancePolicyType();
+        input.setName("AI Liability");
+
+        when(repository.save(input)).thenReturn(input);
+
+        InsurancePolicyType result = service.createPolicyType(input);
+
+        assertTrue(result.isActive());
+        assertEquals("AI Liability", result.getName());
+    }
+
+    @Test
+    void testUpdatePolicyTypeSuccess() {
+
+        InsurancePolicyType existing = new InsurancePolicyType();
+        existing.setId(1L);
+        existing.setName("Old");
+
+        InsurancePolicyType updated = new InsurancePolicyType();
+        updated.setName("New");
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(existing)).thenReturn(existing);
+
+        InsurancePolicyType result =
+                service.updatePolicyType(1L, updated);
+
+        assertEquals("New", result.getName());
+    }
+
+    @Test
+    void testUpdatePolicyTypeNotFound() {
+
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.updatePolicyType(99L, new InsurancePolicyType()));
+    }
+
+    @Test
+    void testGetAllPolicyTypes() {
+
+        when(repository.findAll()).thenReturn(List.of(new InsurancePolicyType()));
+
+        List<InsurancePolicyType> list = service.getAllPolicyTypes();
+
+        assertEquals(1, list.size());
+    }
+}
+
+PolicyServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.dto.PolicyIssuanceRequest;
+import com.project.InsureAI.dto.PolicyRenewalRequest;
+import com.project.InsureAI.dto.PolicyResponse;
+import com.project.InsureAI.entity.*;
+import com.project.InsureAI.exception.BusinessException;
+import com.project.InsureAI.exception.ConflictException;
+import com.project.InsureAI.exception.ResourceNotFoundException;
+import com.project.InsureAI.repository.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static com.project.InsureAI.entity.PolicyStatus.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class PolicyServiceTest {
+
+    @Mock
+    private AuthService authService;
+    @Mock
+    private AISystemRepository aiSystemRepository;
+    @Mock
+    private InsurancePolicyTypeRepository policyTypeRepository;
+    @Mock
+    private RiskAssessmentRepository riskRepository;
+    @Mock
+    private PolicyRepository policyRepository;
+    @Mock
+    private PremiumCalculationEngine engine;
+    @Mock
+    private ClaimRepository claimRepository;
+
+    @InjectMocks
+    private PolicyService policyService;
+
+    private Company company() {
+        Company c = new Company();
+        c.setId(1L);
+        return c;
+    }
+
+    private MyUser user(Company c) {
+        MyUser u = new MyUser();
+        u.setId(10L);
+        u.setCompany(c);
+        return u;
+    }
+
+    private AISystem aiSystem(Company c) {
+        AISystem ai = new AISystem();
+        ai.setId(5L);
+        ai.setCompany(c);
+        return ai;
+    }
+
+    private InsurancePolicyType policyType() {
+        InsurancePolicyType t = new InsurancePolicyType();
+        t.setId(2L);
+        t.setActive(true);
+        t.setBasePrice(10000);
+        t.setMinCoverage(100000);
+        t.setMaxCoverage(1000000);
+        return t;
+    }
+
+    private RiskAssessment risk(AISystem ai) {
+        RiskAssessment r = new RiskAssessment();
+        r.setId(3L);
+        r.setAiSystem(ai);
+        r.setRiskLevel(RiskLevel.MEDIUM);
+        r.setActive(true);
+        return r;
+    }
+
+    @Test
+    void issuePolicy_success() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+        InsurancePolicyType type = policyType();
+        RiskAssessment risk = risk(ai);
+
+        PolicyIssuanceRequest req = new PolicyIssuanceRequest();
+        req.setAiSystemId(5L);
+        req.setPolicyTypeId(2L);
+        req.setCoverageLimit(500000);
+        req.setDeductibleAmount(5000);
+        req.setTenureYears(1);
+
+        PremiumBreakdown breakdown = new PremiumBreakdown();
+        breakdown.setTechnicalPremium(20000);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(aiSystemRepository.findByIdAndCompany(5L, c)).thenReturn(Optional.of(ai));
+        when(policyTypeRepository.findById(2L)).thenReturn(Optional.of(type));
+        when(riskRepository.findByAiSystemAndIsActiveTrue(ai)).thenReturn(Optional.of(risk));
+        when(policyRepository.findByAiSystemAndPolicyTypeAndIsActiveTrue(ai, type)).thenReturn(Optional.empty());
+        when(engine.calculate(anyDouble(), anyDouble(), any(), anyInt(), anyDouble(), anyInt()))
+                .thenReturn(breakdown);
+        when(policyRepository.save(any())).thenAnswer(i -> {
+            Policy p = i.getArgument(0);
+            p.setId(100L);
+            return p;
+        });
+
+        PolicyResponse res = policyService.issuePolicy(req);
+
+        assertEquals(PENDING_APPROVAL, res.getStatus());
+        verify(policyRepository).save(any());
+    }
+
+    @Test
+    void renewPolicy_success() {
+
+        Company c = company();
+        MyUser u = user(c);
+        AISystem ai = aiSystem(c);
+        InsurancePolicyType type = policyType();
+        RiskAssessment risk = risk(ai);
+
+        Policy old = new Policy();
+        old.setId(1L);
+        old.setAiSystem(ai);
+        old.setPolicyType(type);
+        old.setActive(true);
+
+        PolicyRenewalRequest req = new PolicyRenewalRequest();
+        req.setPolicyId(1L);
+        req.setCoverageLimit(600000);
+        req.setDeductibleAmount(5000);
+        req.setTenureYears(1);
+
+        PremiumBreakdown breakdown = new PremiumBreakdown();
+        breakdown.setTechnicalPremium(25000);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(policyRepository.findById(1L)).thenReturn(Optional.of(old));
+        when(riskRepository.findByAiSystemAndIsActiveTrue(ai)).thenReturn(Optional.of(risk));
+        when(claimRepository.countByPolicyAndStatus(old, ClaimStatus.APPROVED)).thenReturn(1);
+        when(policyRepository.findByAiSystemAndPolicyTypeAndIsActiveTrue(ai, type)).thenReturn(Optional.empty());
+        when(engine.calculate(anyDouble(), anyDouble(), any(), anyInt(), anyDouble(), anyInt()))
+                .thenReturn(breakdown);
+        when(policyRepository.save(any())).thenAnswer(i -> {
+            Policy p = i.getArgument(0);
+            if (p.getId() == null) p.setId(200L);
+            return p;
+        });
+
+        PolicyResponse res = policyService.renewPolicy(req);
+
+        assertEquals(ACTIVE, res.getStatus());
+        verify(policyRepository, times(2)).save(any());
+    }
+}
+
+CustomerDashboardServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.dto.AiRiskSnapshotDTO;
+import com.project.InsureAI.dto.CustomerDashboardResponse;
+import com.project.InsureAI.dto.PolicySummaryDTO;
+import com.project.InsureAI.entity.Company;
+import com.project.InsureAI.entity.MyUser;
+import com.project.InsureAI.entity.PolicyStatus;
+import com.project.InsureAI.entity.RiskLevel;
+import com.project.InsureAI.repository.AISystemRepository;
+import com.project.InsureAI.repository.ClaimRepository;
+import com.project.InsureAI.repository.PolicyRepository;
+import com.project.InsureAI.repository.RiskAssessmentRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class CustomerDashboardServiceTest {
+
+    @Mock
+    private PolicyRepository policyRepository;
+
+    @Mock
+    private ClaimRepository claimRepository;
+
+    @Mock
+    private AISystemRepository aiSystemRepository;
+
+    @Mock
+    private RiskAssessmentRepository riskRepository;
+
+    @Mock
+    private AuthService authService;
+
+    @InjectMocks
+    private CustomerDashboardService dashboardService;
+
+    private MyUser mockUser(Long companyId) {
+        Company c = new Company();
+        c.setId(companyId);
+
+        MyUser u = new MyUser();
+        u.setId(10L);
+        u.setCompany(c);
+        return u;
+    }
+
+    @Test
+    void getDashboardData_success_withAlerts() {
+
+        Long companyId = 1L;
+        MyUser user = mockUser(companyId);
+
+        PolicySummaryDTO policyDto =
+                new PolicySummaryDTO(
+                        "Auto Insurance",
+                        500000,
+                        200000,
+                        PolicyStatus.ACTIVE
+                );
+
+        AiRiskSnapshotDTO riskDto =
+                new AiRiskSnapshotDTO(
+                        "Fraud AI",
+                        85,
+                        RiskLevel.MEDIUM
+                );
+
+        when(authService.getCurrentUser()).thenReturn(user);
+
+        when(policyRepository.countActivePoliciesForCompany(companyId))
+                .thenReturn(3L);
+
+        when(claimRepository.countClaimsForCompany(companyId))
+                .thenReturn(2L);
+
+        when(policyRepository.sumRemainingCoverage(companyId))
+                .thenReturn(900000.0);
+
+        when(aiSystemRepository.countByCompanyId(companyId))
+                .thenReturn(4L);
+
+        when(claimRepository.getLastPayout(companyId))
+                .thenReturn(20000.0);
+
+        when(policyRepository.getPolicySnapshot(companyId))
+                .thenReturn(List.of(policyDto));
+
+        when(riskRepository.getRiskSnapshot(companyId))
+                .thenReturn(List.of(riskDto));
+
+        CustomerDashboardResponse res =
+                dashboardService.getDashboardData();
+
+        assertEquals(3L, res.getActivePolicies());
+        assertEquals(2L, res.getClaimsSubmitted());
+        assertEquals(900000.0, res.getRemainingCoverage());
+        assertEquals(4L, res.getAiSystems());
+        assertEquals(20000.0, res.getLastPayout());
+        assertEquals(2, res.getAlerts().size());
+
+        verify(policyRepository).countActivePoliciesForCompany(companyId);
+        verify(claimRepository).countClaimsForCompany(companyId);
+        verify(aiSystemRepository).countByCompanyId(companyId);
+        verify(riskRepository).getRiskSnapshot(companyId);
+    }
+
+    @Test
+    void getDashboardData_success_noAlerts() {
+
+        Long companyId = 1L;
+        MyUser user = mockUser(companyId);
+
+        PolicySummaryDTO policyDto =
+                new PolicySummaryDTO(
+                        "Health Insurance",
+                        300000,
+                        300000,
+                        PolicyStatus.ACTIVE
+                );
+
+        AiRiskSnapshotDTO riskDto =
+                new AiRiskSnapshotDTO(
+                        "Chatbot AI",
+                        40,
+                        RiskLevel.LOW
+                );
+
+        when(authService.getCurrentUser()).thenReturn(user);
+
+        when(policyRepository.countActivePoliciesForCompany(companyId))
+                .thenReturn(1L);
+
+        when(claimRepository.countClaimsForCompany(companyId))
+                .thenReturn(0L);
+
+        when(policyRepository.sumRemainingCoverage(companyId))
+                .thenReturn(300000.0);
+
+        when(aiSystemRepository.countByCompanyId(companyId))
+                .thenReturn(1L);
+
+        when(claimRepository.getLastPayout(companyId))
+                .thenReturn(0.0);
+
+        when(policyRepository.getPolicySnapshot(companyId))
+                .thenReturn(List.of(policyDto));
+
+        when(riskRepository.getRiskSnapshot(companyId))
+                .thenReturn(List.of(riskDto));
+
+        CustomerDashboardResponse res =
+                dashboardService.getDashboardData();
+
+        assertEquals(0, res.getAlerts().size());
+
+        verify(policyRepository).getPolicySnapshot(companyId);
+        verify(riskRepository).getRiskSnapshot(companyId);
+    }
+}
+
+ClaimServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.dto.ClaimResponse;
+import com.project.InsureAI.dto.SubmitClaimRequest;
+import com.project.InsureAI.entity.*;
+import com.project.InsureAI.exception.BusinessException;
+import com.project.InsureAI.exception.ConflictException;
+import com.project.InsureAI.exception.ResourceNotFoundException;
+import com.project.InsureAI.repository.ClaimRepository;
+import com.project.InsureAI.repository.PolicyRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static com.project.InsureAI.entity.PolicyStatus.ACTIVE;
+import static com.project.InsureAI.entity.PolicyStatus.EXPIRED;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ClaimServiceTest {
+
+    @Mock
+    private ClaimRepository claimRepository;
+
+    @Mock
+    private PolicyRepository policyRepository;
+
+    @Mock
+    private AuthService authService;
+
+    @InjectMocks
+    private ClaimService claimService;
+
+    private Company company() {
+        Company c = new Company();
+        c.setId(1L);
+        return c;
+    }
+
+    private MyUser user(Company c) {
+        MyUser u = new MyUser();
+        u.setId(10L);
+        u.setCompany(c);
+        return u;
+    }
+
+    private Policy activePolicy(Company c) {
+        AISystem ai = new AISystem();
+        ai.setCompany(c);
+
+        Policy p = new Policy();
+        p.setId(5L);
+        p.setAiSystem(ai);
+        p.setStatus(ACTIVE);
+        p.setActive(true);
+        p.setRemainingCoverage(100000);
+        p.setDeductibleAmount(1000);
+        return p;
+    }
+
+    @Test
+    void submitClaim_success() {
+
+        Company c = company();
+        MyUser u = user(c);
+        Policy policy = activePolicy(c);
+
+        SubmitClaimRequest req = new SubmitClaimRequest();
+        req.setPolicyId(5L);
+        req.setClaimAmount(5000);
+
+        Claim saved = new Claim();
+        saved.setId(100L);
+        saved.setPolicy(policy);
+        saved.setClaimAmount(5000);
+        saved.setClaimDate(LocalDate.now());
+        saved.setStatus(ClaimStatus.RAISED);
+        saved.setPayoutAmount(0);
+        saved.setVerifiedLoss(0);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(policyRepository.findById(5L)).thenReturn(Optional.of(policy));
+        when(claimRepository.save(any())).thenReturn(saved);
+
+        ClaimResponse res = claimService.submitClaim(req);
+
+        assertNotNull(res);
+        assertEquals(ClaimStatus.RAISED, res.getStatus());
+        verify(claimRepository, times(1)).save(any());
+    }
+
+    @Test
+    void submitClaim_policyNotFound() {
+
+        Company c = company();
+        MyUser u = user(c);
+
+        SubmitClaimRequest req = new SubmitClaimRequest();
+        req.setPolicyId(99L);
+        req.setClaimAmount(2000);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(policyRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> claimService.submitClaim(req));
+    }
+
+    @Test
+    void submitClaim_unauthorizedCompany() {
+
+        Company logged = company();
+        Company other = new Company();
+        other.setId(2L);
+
+        MyUser u = user(logged);
+        Policy policy = activePolicy(other);
+
+        SubmitClaimRequest req = new SubmitClaimRequest();
+        req.setPolicyId(5L);
+        req.setClaimAmount(2000);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(policyRepository.findById(5L)).thenReturn(Optional.of(policy));
+
+        assertThrows(BusinessException.class,
+                () -> claimService.submitClaim(req));
+    }
+
+    @Test
+    void submitClaim_policyNotActive() {
+
+        Company c = company();
+        MyUser u = user(c);
+        Policy policy = activePolicy(c);
+        policy.setActive(false);
+
+        SubmitClaimRequest req = new SubmitClaimRequest();
+        req.setPolicyId(5L);
+        req.setClaimAmount(2000);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(policyRepository.findById(5L)).thenReturn(Optional.of(policy));
+
+        assertThrows(BusinessException.class,
+                () -> claimService.submitClaim(req));
+    }
+
+    @Test
+    void approveClaim_success() {
+
+        Company c = company();
+        Policy policy = activePolicy(c);
+
+        Claim claim = new Claim();
+        claim.setId(10L);
+        claim.setStatus(ClaimStatus.RAISED);
+        claim.setPolicy(policy);
+        claim.setClaimAmount(10000);
+        claim.setClaimDate(LocalDate.now());
+
+        when(claimRepository.findById(10L)).thenReturn(Optional.of(claim));
+        when(claimRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        ClaimResponse res = claimService.approveClaim(10L, 8000);
+
+        assertEquals(ClaimStatus.APPROVED, res.getStatus());
+        verify(policyRepository, times(1)).save(policy);
+        verify(claimRepository, times(1)).save(claim);
+    }
+
+    @Test
+    void approveClaim_notFound() {
+
+        when(claimRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> claimService.approveClaim(1L, 5000));
+    }
+
+    @Test
+    void approveClaim_alreadyProcessed() {
+
+        Policy policy = activePolicy(company());
+        Claim claim = new Claim();
+        claim.setId(10L);
+        claim.setPolicy(policy);
+        claim.setStatus(ClaimStatus.APPROVED);
+
+        when(claimRepository.findById(10L)).thenReturn(Optional.of(claim));
+
+        assertThrows(ConflictException.class,
+                () -> claimService.approveClaim(10L, 5000));
+    }
+
+    @Test
+    void approveClaim_exceedsCoverage() {
+
+        Company c = company();
+        Policy policy = activePolicy(c);
+
+        policy.setRemainingCoverage(500);     // VERY SMALL
+        policy.setDeductibleAmount(0);        // IMPORTANT
+
+        Claim claim = new Claim();
+        claim.setId(10L);
+        claim.setStatus(ClaimStatus.RAISED);
+        claim.setPolicy(policy);
+
+        when(claimRepository.findById(10L)).thenReturn(Optional.of(claim));
+
+        assertThrows(ConflictException.class,
+                () -> claimService.approveClaim(10L, 10000));
+
+        assertEquals(EXPIRED, policy.getStatus());
+        assertFalse(policy.isActive());
+
+        verify(policyRepository, never()).save(any());
+        verify(claimRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectClaim_success() {
+
+        Policy policy = activePolicy(company());
+
+        Claim claim = new Claim();
+        claim.setId(5L);
+        claim.setPolicy(policy);
+        claim.setStatus(ClaimStatus.RAISED);
+        claim.setClaimAmount(4000);
+        claim.setClaimDate(LocalDate.now());
+
+        when(claimRepository.findById(5L)).thenReturn(Optional.of(claim));
+        when(claimRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        ClaimResponse res = claimService.rejectClaim(5L);
+
+        assertEquals(ClaimStatus.REJECTED, res.getStatus());
+        verify(claimRepository).save(claim);
+    }
+
+    @Test
+    void getClaimsForPolicy_success() {
+
+        Company c = company();
+        MyUser u = user(c);
+        Policy policy = activePolicy(c);
+
+        Claim claim = new Claim();
+        claim.setId(1L);
+        claim.setPolicy(policy);
+        claim.setClaimAmount(2000);
+        claim.setClaimDate(LocalDate.now());
+        claim.setStatus(ClaimStatus.RAISED);
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(policyRepository.findById(5L)).thenReturn(Optional.of(policy));
+        when(claimRepository.findByPolicy(policy)).thenReturn(List.of(claim));
+
+        List<ClaimResponse> list = claimService.getClaimsForPolicy(5L);
+
+        assertEquals(1, list.size());
+    }
+
+    @Test
+    void getClaimsForCompany_success() {
+
+        Company c = company();
+        MyUser u = user(c);
+
+        Policy policy = activePolicy(c);
+
+        Claim claim = new Claim();
+        claim.setId(1L);
+        claim.setPolicy(policy);
+        claim.setStatus(ClaimStatus.RAISED);
+        claim.setClaimAmount(1000);
+        claim.setClaimDate(LocalDate.now());
+
+        when(authService.getCurrentUser()).thenReturn(u);
+        when(claimRepository.findByPolicy_AiSystem_Company(c))
+                .thenReturn(List.of(claim));
+
+        List<ClaimResponse> res = claimService.getClaimsForCompany();
+
+        assertEquals(1, res.size());
+    }
+
+    @Test
+    void getAllClaimsForAdmin_success() {
+
+        Policy policy = activePolicy(company());
+
+        Claim claim = new Claim();
+        claim.setId(1L);
+        claim.setPolicy(policy);
+        claim.setStatus(ClaimStatus.RAISED);
+        claim.setClaimAmount(1000);
+        claim.setClaimDate(LocalDate.now());
+
+        when(claimRepository.findAll()).thenReturn(List.of(claim));
+
+        List<ClaimResponse> res = claimService.getAllClaimsForAdmin();
+
+        assertEquals(1, res.size());
+        verify(claimRepository).findAll();
+    }
+}
+
+AuthServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.entity.MyUser;
+import com.project.InsureAI.exception.BusinessException;
+import com.project.InsureAI.exception.ResourceNotFoundException;
+import com.project.InsureAI.repository.MyUserRepository;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.extension.ExtendWith;
+
+@ExtendWith(MockitoExtension.class)
+class AuthServiceTest {
+
+    @Mock
+    MyUserRepository userRepository;
+
+    @Mock
+    Authentication authentication;
+
+    @InjectMocks
+    AuthService authService;
+
+    @Test
+    void testGetCurrentUserSuccess() {
+
+        MyUser user = new MyUser();
+        user.setEmail("test@mail.com");
+
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("test@mail.com");
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        when(userRepository.findByEmail("test@mail.com"))
+                .thenReturn(Optional.of(user));
+
+        MyUser result = authService.getCurrentUser();
+
+        assertEquals("test@mail.com", result.getEmail());
+    }
+
+    @Test
+    void testUserNotAuthenticated() {
+
+        SecurityContextHolder.clearContext();
+
+        assertThrows(BusinessException.class,
+                () -> authService.getCurrentUser());
+    }
+
+    @Test
+    void testUserNotFound() {
+
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn("unknown@mail.com");
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        when(userRepository.findByEmail("unknown@mail.com"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> authService.getCurrentUser());
+    }
+}
+
+AISystemServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.dto.CreateAISystemRequest;
+import com.project.InsureAI.entity.AISystem;
+import com.project.InsureAI.entity.Company;
+import com.project.InsureAI.entity.DataExposureCategory;
+import com.project.InsureAI.entity.MyUser;
+import com.project.InsureAI.exception.ResourceNotFoundException;
+import com.project.InsureAI.repository.AISystemRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static com.project.InsureAI.entity.DeploymentType.CLOUD;
+import static com.project.InsureAI.entity.ModelType.LLM;
+import static com.project.InsureAI.entity.OwnershipType.OWNED;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class AISystemServiceTest {
+
+    @Mock
+    private AISystemRepository aiSystemRepository;
+
+    @Mock
+    private AuthService authService;
+
+    @InjectMocks
+    private AISystemService aiSystemService;
+
+    private Company mockCompany() {
+        Company company = new Company();
+        company.setId(1L);
+        company.setName("Test Company");
+        return company;
+    }
+
+    private MyUser mockUser(Company company) {
+        MyUser user = new MyUser();
+        user.setId(10L);
+        user.setCompany(company);
+        return user;
+    }
+
+    @Test
+    void createAISystem_success() {
+
+        Company company = mockCompany();
+        MyUser user = mockUser(company);
+
+        CreateAISystemRequest request = new CreateAISystemRequest();
+        request.setName("Fraud Detection AI");
+        request.setDescription("Detects fraudulent claims");
+        request.setOwnershipType(OWNED);
+        request.setDeploymentType(CLOUD);
+        request.setBusinessCritical(true);
+        request.setVersion("v1");
+        request.setModelType(LLM);
+        request.setDataProcessedType(DataExposureCategory.GENERIC);
+        request.setProductionSince(LocalDate.now());
+
+        when(authService.getCurrentUser()).thenReturn(user);
+        when(aiSystemRepository.save(any(AISystem.class)))
+                .thenAnswer(invocation -> {
+                    AISystem saved = invocation.getArgument(0);
+                    saved.setId(100L);
+                    return saved;
+                });
+
+        AISystem result = aiSystemService.createAISystem(request);
+
+        assertNotNull(result);
+        assertEquals("Fraud Detection AI", result.getName());
+        assertEquals(company, result.getCompany());
+        assertTrue(result.isActive());
+        assertNotNull(result.getCreatedAt());
+
+        verify(aiSystemRepository, times(1)).save(any(AISystem.class));
+        verify(authService, times(1)).getCurrentUser();
+    }
+
+    @Test
+    void getMyAISystems_success() {
+
+        Company company = mockCompany();
+        MyUser user = mockUser(company);
+
+        AISystem ai1 = new AISystem();
+        ai1.setId(1L);
+        ai1.setName("AI 1");
+        ai1.setCompany(company);
+
+        AISystem ai2 = new AISystem();
+        ai2.setId(2L);
+        ai2.setName("AI 2");
+        ai2.setCompany(company);
+
+        when(authService.getCurrentUser()).thenReturn(user);
+        when(aiSystemRepository.findByCompany(company))
+                .thenReturn(List.of(ai1, ai2));
+
+        List<AISystem> result = aiSystemService.getMyAISystems();
+
+        assertEquals(2, result.size());
+        verify(aiSystemRepository, times(1)).findByCompany(company);
+    }
+
+    @Test
+    void getAISystemById_success() {
+
+        Company company = mockCompany();
+        MyUser user = mockUser(company);
+
+        AISystem aiSystem = new AISystem();
+        aiSystem.setId(5L);
+        aiSystem.setName("Risk AI");
+        aiSystem.setCompany(company);
+
+        when(authService.getCurrentUser()).thenReturn(user);
+        when(aiSystemRepository.findByIdAndCompany(5L, company))
+                .thenReturn(Optional.of(aiSystem));
+
+        AISystem result = aiSystemService.getAISystemById(5L);
+
+        assertNotNull(result);
+        assertEquals(5L, result.getId());
+        verify(aiSystemRepository, times(1))
+                .findByIdAndCompany(5L, company);
+    }
+
+    @Test
+    void getAISystemById_notFound() {
+
+        Company company = mockCompany();
+        MyUser user = mockUser(company);
+
+        when(authService.getCurrentUser()).thenReturn(user);
+        when(aiSystemRepository.findByIdAndCompany(99L, company))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> aiSystemService.getAISystemById(99L));
+
+        verify(aiSystemRepository, times(1))
+                .findByIdAndCompany(99L, company);
+    }
+}
+
+AdminDashboardServiceTest.java
+---
+package com.project.InsureAI.service;
+
+import com.project.InsureAI.dto.AdminDashboardResponse;
+import com.project.InsureAI.dto.PolicyRevenueDTO;
+import com.project.InsureAI.dto.ClaimTrendDTO;
+import com.project.InsureAI.entity.PolicyStatus;
+import com.project.InsureAI.entity.ClaimStatus;
+import com.project.InsureAI.repository.PolicyRepository;
+import com.project.InsureAI.repository.ClaimRepository;
+import com.project.InsureAI.repository.CompanyRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+
+import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+
+@ExtendWith(MockitoExtension.class)
+class AdminDashboardServiceTest {
+
+    @Mock
+    PolicyRepository policyRepository;
+
+    @Mock
+    ClaimRepository claimRepository;
+
+    @Mock
+    CompanyRepository companyRepository;
+
+    @InjectMocks
+    AdminDashboardService service;
+
+    @Test
+    void testGetDashboardData() {
+
+        // ⭐ KPI mocks
+        when(companyRepository.count()).thenReturn(10L);
+        when(policyRepository.countByIsActiveTrue()).thenReturn(20L);
+        when(policyRepository.countByStatus(PolicyStatus.PENDING_APPROVAL)).thenReturn(5L);
+        when(claimRepository.countByStatus(ClaimStatus.RAISED)).thenReturn(3L);
+        when(claimRepository.getTotalPayout()).thenReturn(50000.0);
+
+        // ⭐ Analytics mocks
+        PolicyRevenueDTO revenueDTO =
+                new PolicyRevenueDTO("AI Liability", 100000, 50L);
+
+        ClaimTrendDTO trendDTO =
+                new ClaimTrendDTO(ClaimStatus.APPROVED, 4L);
+
+        when(policyRepository.getRevenueByPolicyType())
+                .thenReturn(List.of(revenueDTO));
+
+        when(claimRepository.getClaimTrend())
+                .thenReturn(List.of(trendDTO));
+
+        // ⭐ call service
+        AdminDashboardResponse response =
+                service.getDashboardData();
+
+        // ⭐ assertions
+        assertEquals(10, response.getTotalCompanies());
+        assertEquals(20, response.getActivePolicies());
+        assertEquals(5, response.getPendingPolicies());
+        assertEquals(3, response.getPendingClaims());
+        assertEquals(50000.0, response.getTotalPayout());
+
+        assertEquals(1, response.getRevenueByProduct().size());
+        assertEquals("AI Liability",
+                response.getRevenueByProduct().get(0).getPolicyTypeName());
+
+        assertEquals(1, response.getClaimTrend().size());
+        assertEquals(ClaimStatus.APPROVED,
+                response.getClaimTrend().get(0).getStatus());
+        assertEquals(4L,
+                response.getClaimTrend().get(0).getCount());
+    }
+}
+
+AuthControllerTest.java (from main/resources)
+---
+package com.project.InsureAI.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.InsureAI.entity.InsurancePolicyType;
+import com.project.InsureAI.service.PolicyTypeService;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(AdminPolicyTypeController.class)
+class AdminPolicyTypeControllerTest {
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @Mock
+    PolicyTypeService service;
+
+    @InjectMocks
+    AdminPolicyTypeController controller;
+
+    @Test
+    void testGetAllPolicyTypes() throws Exception {
+
+        InsurancePolicyType type = new InsurancePolicyType();
+        type.setId(1L);
+        type.setName("AI Liability");
+
+        when(service.getAllPolicyTypes())
+                .thenReturn(List.of(type));
+
+        mockMvc.perform(get("/api/admin/policy-types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("AI Liability"));
+    }
+
+    @Test
+    void testCreatePolicyType() throws Exception {
+
+        InsurancePolicyType input = new InsurancePolicyType();
+        input.setName("Cyber Risk");
+
+        InsurancePolicyType saved = new InsurancePolicyType();
+        saved.setId(2L);
+        saved.setName("Cyber Risk");
+
+        when(service.createPolicyType(input)).thenReturn(saved);
+
+        mockMvc.perform(post("/api/admin/policy-types")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Cyber Risk"));
+    }
+}
+
+AdminPolicyTypeControllerTest.java (from main/resources)
+---
+package com.project.InsureAI.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.InsureAI.entity.InsurancePolicyType;
+import com.project.InsureAI.service.PolicyTypeService;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(AdminPolicyTypeController.class)
+class AdminPolicyTypeControllerTest {
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @Mock
+    PolicyTypeService service;
+
+    @InjectMocks
+    AdminPolicyTypeController controller;
+
+    @Test
+    void testGetAllPolicyTypes() throws Exception {
+
+        InsurancePolicyType type = new InsurancePolicyType();
+        type.setId(1L);
+        type.setName("AI Liability");
+
+        when(service.getAllPolicyTypes())
+                .thenReturn(List.of(type));
+
+        mockMvc.perform(get("/api/admin/policy-types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("AI Liability"));
+    }
+
+    @Test
+    void testCreatePolicyType() throws Exception {
+
+        InsurancePolicyType input = new InsurancePolicyType();
+        input.setName("Cyber Risk");
+
+        InsurancePolicyType saved = new InsurancePolicyType();
+        saved.setId(2L);
+        saved.setName("Cyber Risk");
+
+        when(service.createPolicyType(input)).thenReturn(saved);
+
+        mockMvc.perform(post("/api/admin/policy-types")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Cyber Risk"));
+    }
+}
+
+ClaimControllerTest.java
+---
+package com.project.InsureAI.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.InsureAI.dto.ClaimApprovalRequest;
+import com.project.InsureAI.dto.ClaimResponse;
+import com.project.InsureAI.dto.SubmitClaimRequest;
+import com.project.InsureAI.service.ClaimService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(
+        controllers = ClaimController.class,
+        excludeAutoConfiguration = {
+                org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class,
+                org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration.class
+        }
+)
+class ClaimControllerTest {
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @MockBean
+    ClaimService claimService;
+
+    @MockBean
+    com.project.InsureAI.security.JwtUtil jwtUtil; // ⭐ required because JwtFilter depends on it
+
+    @MockBean
+    com.project.InsureAI.security.CustomUserDetailsService customUserDetailsService;
+
+    @Test
+    void testSubmitClaim() throws Exception {
+
+        SubmitClaimRequest request = new SubmitClaimRequest();
+        request.setPolicyId(1L);
+        request.setClaimAmount(10000);
+        request.setDescription("AI system failure");
+
+        ClaimResponse response = new ClaimResponse();
+        response.setClaimId(10L);
+        response.setDescription("AI system failure");
+
+        when(claimService.submitClaim(any(SubmitClaimRequest.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/claims/submit")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.claimId").value(10L));
+    }
+
+    @Test
+    void testApproveClaim() throws Exception {
+
+        ClaimApprovalRequest request = new ClaimApprovalRequest();
+        request.setVerifiedLoss(5000);
+
+        ClaimResponse response = new ClaimResponse();
+        response.setClaimId(5L);
+        response.sertVerifiedLoss(5000);
+
+        when(claimService.approveClaim(5L, 5000)).thenReturn(response);
+
+        mockMvc.perform(put("/api/claims/admin/5/approve")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.claimId").value(5));
+    }
+
+    @Test
+    void testRejectClaim() throws Exception {
+
+        ClaimResponse response = new ClaimResponse();
+        response.setClaimId(7L);
+
+        when(claimService.rejectClaim(7L)).thenReturn(response);
+
+        mockMvc.perform(put("/api/claims/admin/7/reject"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.claimId").value(7));
+    }
+
+    @Test
+    void testGetClaimsForPolicy() throws Exception {
+
+        ClaimResponse response = new ClaimResponse();
+        response.setClaimId(1L);
+
+        when(claimService.getClaimsForPolicy(1L))
+                .thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/claims/policy/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].claimId").value(1));
+    }
+
+    @Test
+    void testGetClaimsForCompany() throws Exception {
+
+        ClaimResponse response = new ClaimResponse();
+        response.setClaimId(2L);
+
+        when(claimService.getClaimsForCompany())
+                .thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/claims/company"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].claimId").value(2));
+    }
+
+    @Test
+    void testGetAllClaimsForAdmin() throws Exception {
+
+        ClaimResponse response = new ClaimResponse();
+        response.setClaimId(3L);
+
+        when(claimService.getAllClaimsForAdmin())
+                .thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/claims/admin/allClaims"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].claimId").value(3));
+    }
+}
+
+AuthControllerTest.java (from test/java)
+---
+package com.project.InsureAI.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.InsureAI.dto.LoginRequest;
+import com.project.InsureAI.entity.MyUser;
+import com.project.InsureAI.entity.Role;
+import com.project.InsureAI.repository.CompanyRepository;
+import com.project.InsureAI.repository.MyUserRepository;
+import com.project.InsureAI.security.CustomUserDetailsService;
+import com.project.InsureAI.security.JwtUtil;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Optional;
+
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(AuthController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class AuthControllerTest {
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @MockBean
+    MyUserRepository userRepository;
+
+    @MockBean
+    PasswordEncoder passwordEncoder;
+
+    @MockBean
+    AuthenticationManager authenticationManager;
+
+    @MockBean
+    CompanyRepository companyRepository;
+
+    @MockBean
+    JwtUtil jwtUtil;
+
+    @MockBean
+    CustomUserDetailsService customUserDetailsService;
+
+    @Test
+    void testLoginSuccess() throws Exception {
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@mail.com");
+        request.setPassword("1234");
+
+        MyUser user = new MyUser();
+        user.setEmail("test@mail.com");
+        user.setRole(Role.ROLE_COMPANY);
+
+        when(userRepository.findByEmail("test@mail.com"))
+                .thenReturn(Optional.of(user));
+
+        when(jwtUtil.generateToken(any(), any()))
+                .thenReturn("dummy-jwt-token");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("dummy-jwt-token"))
+                .andExpect(jsonPath("$.role").value("ROLE_COMPANY"));
+    }
+}
+
+AISystemControllerTest.java
+---
+package com.project.InsureAI.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.InsureAI.dto.CreateAISystemRequest;
+import com.project.InsureAI.entity.AISystem;
+import com.project.InsureAI.security.CustomUserDetailsService;
+import com.project.InsureAI.security.JwtUtil;
+import com.project.InsureAI.service.AISystemService;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(AISystemController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class AISystemControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private AISystemService aiSystemService;
+
+    @MockBean
+    private JwtUtil jwtUtil;
+
+    @MockBean
+    private CustomUserDetailsService customUserDetailsService;
+
+    @Test
+    void testCreateAISystem() throws Exception {
+
+        CreateAISystemRequest request = new CreateAISystemRequest();
+        request.setName("Fraud AI");
+
+        AISystem system = new AISystem();
+        system.setId(1L);
+        system.setName("Fraud AI");
+
+        when(aiSystemService.createAISystem(any(CreateAISystemRequest.class)))
+                .thenReturn(system);
+
+        mockMvc.perform(post("/api/ai-system")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Fraud AI"));
+    }
+
+    @Test
+    void testGetMyAISystems() throws Exception {
+
+        AISystem s = new AISystem();
+        s.setId(2L);
+        s.setName("Risk Prediction AI");
+
+        when(aiSystemService.getMyAISystems()).thenReturn(List.of(s));
+
+        mockMvc.perform(get("/api/ai-system"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2));
+    }
+
+    @Test
+    void testGetAISystemById() throws Exception {
+
+        AISystem s = new AISystem();
+        s.setId(3L);
+        s.setName("Claim Analyzer AI");
+
+        when(aiSystemService.getAISystemById(3L)).thenReturn(s);
+
+        mockMvc.perform(get("/api/ai-system/3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Claim Analyzer AI"));
+    }
+}
+
+AdminPolicyTypeControllerTest.java (from test/java)
+---
+package com.project.InsureAI.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.InsureAI.entity.InsurancePolicyType;
+import com.project.InsureAI.security.CustomUserDetailsService;
+import com.project.InsureAI.security.JwtUtil;
+import com.project.InsureAI.service.PolicyTypeService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(AdminPolicyTypeController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class AdminPolicyTypeControllerTest {
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @MockBean
+    PolicyTypeService service;
+
+    @MockBean
+    JwtUtil jwtUtil; // ⭐ required because JwtFilter depends on it
+
+    @MockBean
+    CustomUserDetailsService customUserDetailsService;
+
+    @Test
+    void stGetAllPolicyTypes() throws Exception {
+
+        InsurancePolicyType type = new InsurancePolicyType();
+        type.setId(1L);
+        type.setName("AI Liability");
+
+        when(service.getAllPolicyTypes()).thenReturn(List.of(type));
+
+        mockMvc.perform(get("/api/admin/policy-types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("AI Liability"));
+    }
+
+    @Test
+    void testCreatePolicyType() throws Exception {
+
+        InsurancePolicyType saved = new InsurancePolicyType();
+        saved.setId(2L);
+        saved.setName("Cyber Risk");
+
+        when(service.createPolicyType(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(saved);
+
+        mockMvc.perform(post("/api/admin/policy-types")
+                        .contentType("application/json")
+                        .content("""
+                        {
+                          "name":"Cyber Risk"
+                        }
+                    """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Cyber Risk"));
+    }
+}
+
+AdminPolicyControllerTest.java
+---
+package com.project.InsureAI.controller;
+
+import com.project.InsureAI.entity.Policy;
+import com.project.InsureAI.entity.PolicyStatus;
+import com.project.InsureAI.security.CustomUserDetailsService;
+import com.project.InsureAI.security.JwtUtil;
+import com.project.InsureAI.service.PolicyService;
+import com.project.InsureAI.repository.PolicyRepository;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(AdminPolicyController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class AdminPolicyControllerTest {
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @MockBean
+    PolicyRepository policyRepository;
+
+    @MockBean
+    PolicyService policyService;
+
+    @MockBean
+    JwtUtil jwtUtil;
+
+    @MockBean
+    CustomUserDetailsService customUserDetailsService;
+
+    @Test
+    void testGetPendingPolicies() throws Exception {
+
+        Policy p = new Policy();
+        p.setId(1L);
+        p.setStatus(PolicyStatus.PENDING_APPROVAL);
+
+        when(policyRepository.findByStatus(PolicyStatus.PENDING_APPROVAL))
+                .thenReturn(List.of(p));
+
+        mockMvc.perform(get("/api/admin/policies/pending"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
+    @Test
+    void testApprovePolicy() throws Exception {
+
+        Policy p = new Policy();
+        p.setId(2L);
+
+        when(policyService.approvePolicy(2L)).thenReturn(p);
+
+        mockMvc.perform(put("/api/admin/policies/2/approve"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(2));
+    }
+}
+
+AdminDashboardControllerTest.java
+---
+package com.project.InsureAI.controller;
+
+import com.project.InsureAI.dto.AdminDashboardResponse;
+import com.project.InsureAI.security.JwtUtil;
+import com.project.InsureAI.service.AdminDashboardService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(AdminDashboardController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class AdminDashboardControllerTest {
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @MockBean
+    AdminDashboardService adminDashboardService;
+
+    @MockBean
+    JwtUtil jwtUtil; // required because JwtFilter depends on it
+
+    @MockBean
+    com.project.InsureAI.security.CustomUserDetailsService customUserDetailsService;
+
+    @Test
+    void testGetDashboard() throws Exception {
+
+        AdminDashboardResponse response = new AdminDashboardResponse(10, 20, 5, 2, 50000.0, null, null);
+
+
+        when(adminDashboardService.getDashboardData())
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/admin/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCompanies").value(10))
+                .andExpect(jsonPath("$.activePolicies").value(20))
+                .andExpect(jsonPath("$.pendingPolicies").value(5))
+                .andExpect(jsonPath("$.pendingClaims").value(2))
+                .andExpect(jsonPath("$.totalPayout").value(50000.0));
+    }
+}
